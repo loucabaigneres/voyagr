@@ -1,3 +1,5 @@
+import { env } from "./env.js";
+
 import cors from "@fastify/cors";
 import {
   fastifyTRPCPlugin,
@@ -28,7 +30,7 @@ await server.register(fastifyTRPCPlugin, {
 (async () => {
   try {
     // Listen on port 3000 and bind to all network interfaces for Docker compatibility
-    await server.listen({ port: 3000, host: "0.0.0.0" });
+    await server.listen({ port: env.PORT, host: "0.0.0.0" });
     console.log("Server started at http://localhost:3000/trpc");
   } catch (err) {
     server.log.error(err);

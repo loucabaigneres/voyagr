@@ -23,6 +23,9 @@ importers:
       '@voyagr/database':
         specifier: workspace:*
         version: link:../../packages/database
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       fastify:
         specifier: ^5.8.5
         version: 5.8.5
