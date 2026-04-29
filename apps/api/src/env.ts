@@ -1,12 +1,10 @@
-import "dotenv/config";
-import * as z from "zod";
+import 'dotenv/config';
+import * as z from 'zod';
 
 // Define strict schema for environment variables
 const envSchema = z.object({
   // Node configuration
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number(),
 
   // Database configuration
@@ -17,7 +15,7 @@ const envSchema = z.object({
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
-  console.error("❌ Error parsing environment variables:");
+  console.error('❌ Error parsing environment variables:');
   // Show detailed error messages for each invalid variable
   console.error(JSON.stringify(z.treeifyError(parsedEnv.error), null, 2));
   process.exit(1); // Exit with error code if validation fails

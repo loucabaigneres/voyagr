@@ -1,6 +1,6 @@
-import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
-import { createClient } from "@voyagr/database";
-import { env } from "../env.js";
+import { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
+import { createClient } from '@voyagr/database';
+import { env } from '../env.js';
 
 const db = createClient(env.DATABASE_URL);
 
