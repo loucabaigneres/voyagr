@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
+    "lint": "eslint .",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
@@ -23,6 +24,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@voyagr/eslint-config": "workspace:*",
+    "eslint": "^10.2.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

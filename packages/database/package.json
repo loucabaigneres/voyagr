@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "type": "module",
   "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
     "db:seed": "tsx src/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
@@ -21,7 +22,9 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@voyagr/eslint-config": "workspace:*",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^10.2.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

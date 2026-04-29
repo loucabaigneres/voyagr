@@ -31,7 +31,6 @@ await server.register(fastifyTRPCPlugin, {
   try {
     // Listen on port 3000 and bind to all network interfaces for Docker compatibility
     await server.listen({ port: env.PORT, host: "0.0.0.0" });
-    console.log("Server started at http://localhost:3000/trpc");
   } catch (err) {
     server.log.error(err);
     process.exit(1);
