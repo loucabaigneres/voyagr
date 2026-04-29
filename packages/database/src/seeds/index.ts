@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import 'dotenv/config';
 import { createClient } from '../index.js';
 import { seedInspirations } from './inspiration.seed.js';
