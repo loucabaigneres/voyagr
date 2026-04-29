@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
-    "db:seed": "tsx src/seed.ts",
+    "db:seed": "tsx src/seeds/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"

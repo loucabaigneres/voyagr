@@ -52,7 +52,7 @@ The project uses Zod for strict environment validation. You need to create two `
 Create `apps/api/.env`:
 
 ```env
-DATABASE_URL=postgres://admin:password@db:5432/voyagr_dev
+DATABASE_URL=postgres://admin:password@db:5432/voyagr
 PORT=3000
 NODE_ENV=development
 ```
@@ -60,7 +60,7 @@ NODE_ENV=development
 Create `packages/database/.env`:
 
 ```env
-DATABASE_URL=postgres://admin:password@db:5432/voyagr_dev
+DATABASE_URL=postgres://admin:password@localhost:5432/voyagr
 ```
 
 ### 4. Start the Database (Docker)
