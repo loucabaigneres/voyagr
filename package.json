@@ -1,0 +1,18 @@
+{
+  "name": "voyagr",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.2",
+  "devDependencies": {
+    "prettier": "^3.8.3",
+    "turbo": "^2.9.6"
+  }
+}

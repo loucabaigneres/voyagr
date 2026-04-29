@@ -1,0 +1,9 @@
+node_modules
+.pnpm-store
+.git
+.next
+.turbo
+dist
+build
+apps/**/node_modules
+packages/**/node_modules
