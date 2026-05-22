@@ -85,7 +85,7 @@ pnpm --filter @voyagr/database db:seed
 Start the Fastify server:
 
 ```bash
-pnpm turbo run dev --filter=api
+pnpm turbo run dev --filter=@voyagr/api
 ```
 
 ✅ The server should be accessible at `http://localhost:3000/trpc/getInspirations`
@@ -98,7 +98,7 @@ Thanks to Turborepo, you can run commands from the root to target specific proje
 
 | Action                        | Command                                      |
 | ----------------------------- | -------------------------------------------- |
-| **Start the API**             | `pnpm turbo run dev --filter=api`            |
+| **Start the API**             | `pnpm turbo run dev --filter=@voyagr/api`    |
 | **Update local DB**           | `pnpm --filter @voyagr/database db:push`     |
 | **Generate migration (Prod)** | `pnpm --filter @voyagr/database db:generate` |
 | **Stop Docker**               | `docker-compose down`                        |
