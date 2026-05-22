@@ -20,8 +20,6 @@ jobs:
 
       - name: pnpm configuration
         uses: pnpm/action-setup@v6
-        with:
-          version: 10
 
       - name: pnpm cache management
         uses: actions/cache@v5
