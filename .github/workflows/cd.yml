@@ -3,7 +3,7 @@ name: Pipeline CD
 on:
   push:
     branches:
-      - dev
+      - develop
 
 jobs:
   quality-check:
