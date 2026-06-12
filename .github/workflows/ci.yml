@@ -23,7 +23,7 @@ jobs:
           cache: 'pnpm'
       
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter=@voyagr/api...
 
       - name: Global verifications via Turbo
         run: pnpx turbo run format lint --filter=@voyagr/api
