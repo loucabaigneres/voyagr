@@ -33,4 +33,5 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Global verifications via Turbo
-        run: npx turbo run format lint --filter=@voyagr/api
+        # run: npx turbo run format lint --filter=@voyagr/api
+        run: pnpx turbo run format lint --filter=@voyagr/api
