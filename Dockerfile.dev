@@ -1,14 +1,10 @@
 FROM node:24-alpine
 
-RUN npm install -g pnpm turbo
+RUN apk add --no-cache libc6-compat python3 make g++
+
+RUN npm install -g pnpm
 
 WORKDIR /app
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-
-RUN pnpm install
-
-COPY . .
 
 EXPOSE 3000
 
