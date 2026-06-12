@@ -3,6 +3,7 @@
 import 'dotenv/config';
 import { createClient } from '../index.js';
 import { seedInspirations } from './inspiration.seed.js';
+import { seedDiscoveryContent } from './discovery.seed.js';
 import { seedTrips } from './trip.seed.js';
 import { seedPayments } from './payment.seed.js';
 import { seedDocuments } from './document.seed.js';
@@ -14,6 +15,7 @@ async function main() {
 
   try {
     await seedInspirations(db);
+    await seedDiscoveryContent(db);
     await seedTrips(db);
     await seedPayments(db);
     await seedDocuments(db);

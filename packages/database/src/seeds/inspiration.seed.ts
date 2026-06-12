@@ -23,8 +23,13 @@ export async function seedInspirations(db: ReturnType<typeof import('../index.js
     .values([
       {
         id: DISCOVERY_CONTENT_ID,
-        mediaUrl: 'https://s3.voyagr.com/paris-eiffel.mp4',
+        url: 'https://www.tour-eiffel.fr/',
+        mainMediaUrl: 'https://s3.voyagr.com/paris-eiffel.mp4',
         locationName: 'Tour Eiffel',
+        description:
+          'Le monument le plus emblématique de Paris, offrant une vue panoramique sur la capitale.',
+        country: 'France',
+        city: 'Paris',
         coordinates: 'POINT(2.2945 48.8584)',
         tags: ['paris', 'must-see'],
         isActive: true,
