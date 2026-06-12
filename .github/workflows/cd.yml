@@ -3,7 +3,7 @@ name: Pipeline CD
 on:
   push:
     branches:
-      - develop
+      - main
 
 jobs:
   quality-check:
@@ -13,27 +13,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: pnpm configuration
+        uses: pnpm/action-setup@v6
+      
       - name: Node.js configuration
         uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: pnpm configuration
-        uses: pnpm/action-setup@v6
-
-      - name: pnpm cache management
-        uses: actions/cache@v5
-        with:
-          path: ~/.local/share/pnpm/store
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          cache: "pnpm"
       
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Global verifications via Turbo
-        run: npx turbo run format lint build --filter=@voyagr/api --filter=@voyagr/database
+        run: pnpx turbo run format lint build --filter=@voyagr/api --filter=@voyagr/database
 
   build-and-push-docker:
     name: Build and Push Docker Image
