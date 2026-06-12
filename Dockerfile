@@ -5,7 +5,7 @@ WORKDIR /app
 
 FROM base AS pruner
 COPY . .
-RUN turbo prune api --docker
+RUN turbo prune @voyagr/api --docker
 
 FROM base AS builder
 COPY --from=pruner /app/out/json/ .
@@ -14,21 +14,18 @@ RUN pnpm install --frozen-lockfile
 
 COPY --from=pruner /app/out/full/ .
 COPY turbo.json turbo.json
-RUN pnpm turbo run build --filter=api...
+RUN pnpm turbo run build --filter=@voyagr/api...
 
 FROM base AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
-RUN addgroup --system -gid 1001 nodejs
-RUN adduser --system -uid 1001 nodejs
-USER nodejs
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S -u 1001 -G nodejs nodejs
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/packages/database/dist ./packages/database/dist
-COPY --from=builder /app/packages/database/package.json ./packages/database/
+COPY --from=builder --chown=nodejs:nodejs /app /app
+
+USER nodejs
 
 EXPOSE 3000
 

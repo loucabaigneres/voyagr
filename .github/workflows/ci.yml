@@ -1,0 +1,29 @@
+name: Pipeline CI
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  quality-check:
+    name: Quality Check (Only API)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: pnpm configuration
+        uses: pnpm/action-setup@v6
+      
+      - name: Node.js configuration
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Global verifications via Turbo
+        run: pnpx turbo run format lint --filter=@voyagr/api

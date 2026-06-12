@@ -1,0 +1,83 @@
+name: Pipeline CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  quality-check:
+    name: Quality Check (Only API)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: pnpm configuration
+        uses: pnpm/action-setup@v6
+      
+      - name: Node.js configuration
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Global verifications via Turbo
+        run: pnpx turbo run format lint build --filter=@voyagr/api --filter=@voyagr/database
+
+  build-and-push-docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: quality-check
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Connection to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Configure Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/voyagr-api:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voyagr-api:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voyagr-api:buildcache,mode=max
+
+  deploy:
+    name: Deploy to Production
+    needs: build-and-push-docker
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: pnpm configuration
+        uses: pnpm/action-setup@v6
+
+      - name: Drizzle Push to Supabase
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @voyagr/database db:migrate
+        env:
+          SUPABASE_PROD_DATABASE_URL: ${{ secrets.SUPABASE_PROD_DATABASE_URL }}
+          EXTENSIONS_FILTERS: '["postgis"]'
+
+      - name: Trigger Deploy Hook
+        run: |
+          echo "Notification send to Render to load the new Docker image"
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
