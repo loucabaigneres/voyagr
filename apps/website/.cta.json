@@ -1,0 +1,30 @@
+{
+  "projectName": "website",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "pnpm",
+  "includeExamples": true,
+  "tailwind": true,
+  "addOnOptions": {
+    "drizzle": {
+      "database": "postgresql"
+    }
+  },
+  "envVarValues": {},
+  "git": false,
+  "install": true,
+  "routerOnly": false,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "eslint",
+    "sentry",
+    "drizzle",
+    "shadcn",
+    "t3env",
+    "tRPC",
+    "better-auth",
+    "posthog",
+    "tanstack-query"
+  ]
+}
