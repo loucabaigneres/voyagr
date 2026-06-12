@@ -4,11 +4,9 @@ RUN npm install -g pnpm turbo
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY . .
 
 RUN pnpm install
-
-COPY . .
 
 EXPOSE 3000
 
