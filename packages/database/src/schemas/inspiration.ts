@@ -14,8 +14,13 @@ export const importedInspiration = pgTable('imported_inspiration', {
 
 export const discoveryContent = pgTable('discovery_content', {
   id: uuid('id').primaryKey().defaultRandom(),
-  mediaUrl: text('media_url').notNull(),
+  url: text('url').notNull().unique(),
+  mainMediaUrl: text('main_media_url').notNull(),
+  carousselUrls: text('caroussel_urls').array(),
   locationName: text('location_name'),
+  description: text('description'),
+  country: text('country'),
+  city: text('city'),
   coordinates: text('coordinates'),
   tags: jsonb('tags'),
   isActive: boolean('is_active').default(true),
