@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "dotenv -e .env.local -- sh -c \"NODE_OPTIONS='--import ./instrument.server.mjs' vite dev --port 3000\"",
+    "dev": "dotenv -e .env.local -- vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build && cp instrument.server.mjs .output/server",
     "preview": "vite preview",
@@ -37,6 +37,7 @@
     "@trpc/client": "^11.11.0",
     "@trpc/server": "^11.11.0",
     "@trpc/tanstack-react-query": "^11.11.0",
+    "@voyagr/database": "workspace:*",
     "better-auth": "^1.5.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

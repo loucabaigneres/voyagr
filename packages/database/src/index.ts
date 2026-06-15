@@ -7,6 +7,8 @@ import * as trip from './schemas/trip.js';
 import * as payment from './schemas/payment.js';
 import * as document from './schemas/document.js';
 
+export { loadDiscoveryData, type DiscoveryContentData } from './data.js';
+
 export const schema = {
   ...enums,
   ...inspiration,
