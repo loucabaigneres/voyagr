@@ -86,6 +86,8 @@ pnpm --filter @voyagr/database db:push
 pnpm --filter @voyagr/database db:seed
 ```
 
+> ℹ️ Note on `data.json`: The discovery content seed (`discovery.seed.ts`) imports extra locations from `packages/database/data.json` if the file is present. This file is gitignored (large scraped dataset) — without it, the seed simply skips this step and only inserts the test data.
+
 ### 6. Run the API
 
 Start the FastAPI server:

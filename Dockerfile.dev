@@ -6,6 +6,10 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
+COPY . .
+
+RUN pnpm install
+
 EXPOSE 3000
 
-CMD ["pnpm", "turbo", "run", "dev", "--filter=api"]
+CMD ["pnpm", "turbo", "run", "dev", "--filter=@voyagr/api"]
