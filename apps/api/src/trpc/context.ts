@@ -1,14 +1,19 @@
 import { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
-import { createClient } from '@voyagr/database';
-import { env } from '../env.js';
+import { fromNodeHeaders } from 'better-auth/node';
+import { auth } from '../lib/auth.js';
+import { db } from '../lib/db.js';
 
-const db = createClient(env.DATABASE_URL);
+export async function createContext({ req, res }: CreateFastifyContextOptions) {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
 
-export function createContext({ req, res }: CreateFastifyContextOptions) {
   return {
     req,
     res,
     db,
+    user: session?.user || null,
+    session: session || null,
   };
 }
 

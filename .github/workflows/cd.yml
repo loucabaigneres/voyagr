@@ -79,5 +79,5 @@ jobs:
 
       - name: Trigger Deploy Hook
         run: |
-          echo "Notification send to Render to load the new Docker image"
+          echo "Notification sent to Render to load the new Docker image"
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
