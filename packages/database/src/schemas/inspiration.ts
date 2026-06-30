@@ -18,6 +18,7 @@ export const discoveryContent = pgTable('discovery_content', {
   mainMediaUrl: text('main_media_url').notNull(),
   carousselUrls: text('caroussel_urls').array(),
   locationName: text('location_name'),
+  title: text('title'),
   description: text('description'),
   country: text('country'),
   city: text('city'),
