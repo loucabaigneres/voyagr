@@ -10,6 +10,8 @@ import * as trip from './schemas/trip.js';
 
 export { loadDiscoveryData, type DiscoveryContentData } from './data.js';
 
+export { loadDiscoveryData, type DiscoveryContentData } from './data.js';
+
 export const schema = {
   ...enums,
   ...auth,
