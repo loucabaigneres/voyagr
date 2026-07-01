@@ -4,7 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { activity, discoveryContent, trip, tripDay } from '#/db/voyagr'
+import { activity, discoveryContent, swipes, trip, tripDay } from '#/db/voyagr'
 import { recommend } from '#/server/recommendation/algorithm'
 import type {
   DiscoveryItem,
@@ -152,14 +152,10 @@ const discoveryRouter = {
         })
       }
 
-      // Liked places located in the recommended city, in swipe order.
-      const likedInCity = history
-        .filter((s) => s.liked && s.item.city === top.city)
-        .map((s) => s.item)
-
-      // Resolve the real discoveryContent uuids by url (data.json ids ≠ DB uuids).
-      const urls = likedInCity.map((i) => i.url)
-      const rows = urls.length
+      // Resolve DB UUIDs for every swiped item in one query (used for both
+      // swipe persistence and activity creation).
+      const allUrls = history.map((s) => s.item.url)
+      const contentRows = allUrls.length
         ? await ctx.db
             .select({
               id: discoveryContent.id,
@@ -168,11 +164,31 @@ const discoveryRouter = {
               coordinates: discoveryContent.coordinates,
             })
             .from(discoveryContent)
-            .where(inArray(discoveryContent.url, urls))
+            .where(inArray(discoveryContent.url, allUrls))
         : []
-      const rowByUrl = new Map(rows.map((r) => [r.url, r]))
+      const rowByUrl = new Map(contentRows.map((r) => [r.url, r]))
 
-      // 1. Create the draft trip.
+      // 1. Persist all swipes (ON CONFLICT DO NOTHING handles replays).
+      const swipeValues = history.flatMap((s) => {
+        const row = rowByUrl.get(s.item.url)
+        if (!row) return []
+        return [
+          {
+            userId: ctx.userId,
+            discoveryContentId: row.id,
+            direction: s.liked ? 'like' : 'dislike',
+          },
+        ]
+      })
+      if (swipeValues.length > 0) {
+        await ctx.db.insert(swipes).values(swipeValues).onConflictDoNothing()
+      }
+
+      // 2. Create the draft trip.
+      const likedInCity = history
+        .filter((s) => s.liked && s.item.city === top.city)
+        .map((s) => s.item)
+
       const [createdTrip] = await ctx.db
         .insert(trip)
         .values({
@@ -183,7 +199,7 @@ const discoveryRouter = {
         })
         .returning({ id: trip.id })
 
-      // 2. A single day to hold the liked places.
+      // 3. A single day to hold the liked places.
       const [day] = await ctx.db
         .insert(tripDay)
         .values({
@@ -193,7 +209,7 @@ const discoveryRouter = {
         })
         .returning({ id: tripDay.id })
 
-      // 3. One activity per liked place that exists in the database.
+      // 4. One activity per liked place that exists in the database.
       const activityValues = likedInCity.flatMap((item, index) => {
         const row = rowByUrl.get(item.url)
         if (!row) return []
@@ -217,7 +233,7 @@ const discoveryRouter = {
         destination: top.city,
         country: top.country,
         activityCount: activityValues.length,
-        // Liked places not found in the DB (catalog seeded vs not).
+        swipesRecorded: swipeValues.length,
         unresolved: likedInCity.length - activityValues.length,
       }
     }),
