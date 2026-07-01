@@ -31,6 +31,8 @@ interface SwipeEntry {
 }
 
 const LIKE_GOAL = 10
+/** After this many swipes the algorithm re-ranks remaining cards by preference. */
+const EXPLORATION_SIZE = 10
 
 const COUNTRY_FLAGS: Record<string, string> = {
   France: '🇫🇷',
@@ -87,6 +89,38 @@ function DiscoveryPage() {
     enabled: showResult,
   })
 
+  // After the exploration phase (EXPLORATION_SIZE swipes), rank cities by algo score
+  // so the remaining cards are sorted by preference rather than round-robin order.
+  const explorationComplete = history.length >= EXPLORATION_SIZE
+  const rankCitiesQuery = useQuery({
+    ...trpc.discovery.rankCities.queryOptions({ swipes: history }),
+    enabled: explorationComplete,
+  })
+
+  const swipedIds = useMemo(() => new Set(history.map((s) => s.id)), [history])
+
+  // Build the effective feed: exploration order for the first EXPLORATION_SIZE cards,
+  // then algo-sorted so preferred cities bubble up and vetoed cities sink.
+  const effectiveFeed = useMemo(() => {
+    const cityRanks = rankCitiesQuery.data
+    if (!explorationComplete || !cityRanks) return feed
+
+    const scoreOf = Object.fromEntries(cityRanks.map((r) => [r.city, r.score]))
+    const vetoed = new Set(cityRanks.filter((r) => r.vetoed).map((r) => r.city))
+
+    const alreadySeen = feed.filter((item) => swipedIds.has(item.id))
+    const remaining = feed
+      .filter((item) => !swipedIds.has(item.id))
+      .sort((a, b) => {
+        const aVetoed = vetoed.has(a.city ?? '')
+        const bVetoed = vetoed.has(b.city ?? '')
+        if (aVetoed !== bVetoed) return aVetoed ? 1 : -1
+        return (scoreOf[b.city ?? ''] ?? 0) - (scoreOf[a.city ?? ''] ?? 0)
+      })
+
+    return [...alreadySeen, ...remaining]
+  }, [feed, explorationComplete, rankCitiesQuery.data, swipedIds])
+
   // Persisting the recommended trip to the database (on explicit click).
   const saveTrip = useMutation(trpc.discovery.saveTrip.mutationOptions())
 
@@ -95,8 +129,8 @@ function DiscoveryPage() {
     shownAtRef.current = Date.now()
   }, [cursor])
 
-  const topItem = feed.at(cursor)
-  const stack = useMemo(() => feed.slice(cursor, cursor + 3), [feed, cursor])
+  const topItem = effectiveFeed.at(cursor)
+  const stack = useMemo(() => effectiveFeed.slice(cursor, cursor + 3), [effectiveFeed, cursor])
 
   const triggerResult = useCallback(() => setShowResult(true), [])
 
@@ -184,7 +218,7 @@ function DiscoveryPage() {
 
   const progress = Math.min((likes / LIKE_GOAL) * 100, 100)
   const remaining = Math.max(0, LIKE_GOAL - likes)
-  const noMoreCards = !feedQuery.isLoading && cursor >= feed.length
+  const noMoreCards = !feedQuery.isLoading && cursor >= effectiveFeed.length
 
   return (
     <div className="relative isolate min-h-[calc(100dvh-4rem)] w-full overflow-x-hidden bg-[#0f0f13] text-[#e8e8f0]">
