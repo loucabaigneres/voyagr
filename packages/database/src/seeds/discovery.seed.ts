@@ -1,24 +1,11 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import type { DiscoveryContentData } from '../data.js';
 import { discoveryContent } from '../schemas/inspiration.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE_PATH = path.resolve(__dirname, '../../data.json');
-
-interface DiscoveryContentSeedItem {
-  id: string;
-  locationName: string;
-  url: string;
-  mainMediaUrl: string;
-  carousselUrls: string[];
-  description: string;
-  coordinates: string;
-  country: string;
-  city: string;
-  tags: unknown;
-  isActive: boolean;
-}
 
 export async function seedDiscoveryContent(
   db: ReturnType<typeof import('../index.js').createClient>,
@@ -32,7 +19,7 @@ export async function seedDiscoveryContent(
     return;
   }
 
-  const items: DiscoveryContentSeedItem[] = JSON.parse(raw);
+  const items: DiscoveryContentData[] = JSON.parse(raw);
 
   const values = items.map((item) => ({
     url: item.url,

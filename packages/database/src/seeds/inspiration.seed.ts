@@ -31,7 +31,7 @@ export async function seedInspirations(db: ReturnType<typeof import('../index.js
         country: 'France',
         city: 'Paris',
         coordinates: 'POINT(2.2945 48.8584)',
-        tags: ['paris', 'must-see'],
+        tags: { subcategory: ['paris', 'must-see'] },
         isActive: true,
       },
     ])
