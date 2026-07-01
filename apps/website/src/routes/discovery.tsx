@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -68,6 +68,7 @@ function flag(country: string | null): string {
 
 function DiscoveryPage() {
   const trpc = useTRPC()
+  const navigate = useNavigate()
 
   const feedQuery = useQuery(trpc.discovery.feed.queryOptions())
   const feed = feedQuery.data ?? []
@@ -88,7 +89,13 @@ function DiscoveryPage() {
   })
 
   // Persisting the recommended trip to the database (on explicit click).
-  const saveTrip = useMutation(trpc.discovery.saveTrip.mutationOptions())
+  const saveTrip = useMutation(
+    trpc.discovery.saveTrip.mutationOptions({
+      onSuccess: (data) => {
+        navigate({ to: '/trip/$tripId', params: { tripId: data.tripId } })
+      },
+    }),
+  )
 
   const shownAtRef = useRef<number>(Date.now())
   useEffect(() => {
@@ -757,18 +764,15 @@ function ResultOverlay({
 }
 
 function SaveTripButton({ onSave, saveState }: { onSave: () => void; saveState: SaveState }) {
-  if (saveState.isSuccess && saveState.data) {
-    const { activityCount, unresolved } = saveState.data
+  if (saveState.isPending) {
     return (
-      <div className="mt-6 rounded-xl border border-[rgba(46,204,113,.3)] bg-[rgba(46,204,113,.1)] px-4 py-3 text-center text-sm text-[#2ecc71]">
-        ✓ Voyage enregistré — {activityCount} lieu{activityCount > 1 ? 'x' : ''} ajouté
-        {activityCount > 1 ? 's' : ''}
-        {unresolved > 0 && (
-          <span className="mt-1 block text-xs text-[#9a9ac0]">
-            ({unresolved} lieu{unresolved > 1 ? 'x' : ''} liké{unresolved > 1 ? 's' : ''} introuvable
-            {unresolved > 1 ? 's' : ''} en base — seed manquant ?)
-          </span>
-        )}
+      <div className="mt-6">
+        <button
+          disabled
+          className="w-full rounded-xl bg-gradient-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white opacity-70"
+        >
+          Création du voyage…
+        </button>
       </div>
     )
   }
@@ -777,14 +781,13 @@ function SaveTripButton({ onSave, saveState }: { onSave: () => void; saveState: 
     <div className="mt-6">
       <button
         onClick={onSave}
-        disabled={saveState.isPending}
-        className="w-full rounded-xl border border-[rgba(108,99,255,.4)] bg-[rgba(108,99,255,.15)] px-8 py-3 text-sm font-semibold text-[#a9a2ff] transition hover:bg-[rgba(108,99,255,.25)] disabled:opacity-60"
+        className="w-full rounded-xl bg-gradient-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white shadow-lg transition hover:brightness-110"
       >
-        {saveState.isPending ? 'Enregistrement…' : '💾 Sauvegarder ce voyage'}
+        🗺️ Créer mon voyage
       </button>
       {saveState.isError && (
         <p className="mt-2 text-center text-xs text-[#e74c3c]">
-          Échec de l’enregistrement — la base de données est-elle démarrée et seedée ?
+          Échec — la base de données est-elle démarrée et seedée ?
         </p>
       )}
     </div>

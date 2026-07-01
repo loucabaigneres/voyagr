@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@posthog/react": "^1.7.0",
+    "@react-pdf/renderer": "^4.5.1",
     "@sentry/tanstackstart-react": "^10.42.0",
     "@t3-oss/env-core": "^0.13.10",
     "@tailwindcss/vite": "^4.1.18",
