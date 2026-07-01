@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -21,6 +23,16 @@ import { Route as DemoSentryTestingRouteImport } from './routes/demo/sentry.test
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiscoveryRoute = DiscoveryRouteImport.update({
   id: '/discovery',
   path: '/discovery',
@@ -81,6 +93,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/discovery': typeof DiscoveryRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/demo/drizzle': typeof DemoDrizzleRoute
   '/demo/posthog': typeof DemoPosthogRoute
@@ -94,6 +108,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/discovery': typeof DiscoveryRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/demo/drizzle': typeof DemoDrizzleRoute
   '/demo/posthog': typeof DemoPosthogRoute
@@ -108,6 +124,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/discovery': typeof DiscoveryRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/demo/drizzle': typeof DemoDrizzleRoute
   '/demo/posthog': typeof DemoPosthogRoute
@@ -123,6 +141,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/discovery'
+    | '/login'
+    | '/register'
     | '/demo/better-auth'
     | '/demo/drizzle'
     | '/demo/posthog'
@@ -136,6 +156,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/discovery'
+    | '/login'
+    | '/register'
     | '/demo/better-auth'
     | '/demo/drizzle'
     | '/demo/posthog'
@@ -149,6 +171,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/discovery'
+    | '/login'
+    | '/register'
     | '/demo/better-auth'
     | '/demo/drizzle'
     | '/demo/posthog'
@@ -163,6 +187,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   DiscoveryRoute: typeof DiscoveryRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   DemoBetterAuthRoute: typeof DemoBetterAuthRoute
   DemoDrizzleRoute: typeof DemoDrizzleRoute
   DemoPosthogRoute: typeof DemoPosthogRoute
@@ -175,6 +201,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/discovery': {
       id: '/discovery'
       path: '/discovery'
@@ -259,6 +299,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   DiscoveryRoute: DiscoveryRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   DemoBetterAuthRoute: DemoBetterAuthRoute,
   DemoDrizzleRoute: DemoDrizzleRoute,
   DemoPosthogRoute: DemoPosthogRoute,
