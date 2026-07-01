@@ -9,6 +9,7 @@ import * as payment from './schemas/payment.js';
 import * as trip from './schemas/trip.js';
 
 export { loadDiscoveryData, type DiscoveryContentData } from './data.js';
+export type { DiscoveryTags } from './schemas/inspiration.js';
 
 export const schema = {
   ...enums,

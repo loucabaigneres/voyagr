@@ -1,27 +1,13 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import type { InferSelectModel } from 'drizzle-orm';
+import type { discoveryContent } from './schemas/inspiration.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE_PATH = path.resolve(__dirname, '../data.json');
 
-export interface DiscoveryContentData {
-  id: string;
-  locationName: string;
-  url: string;
-  mainMediaUrl: string;
-  carousselUrls: string[];
-  description: string;
-  coordinates: string;
-  country: string;
-  city: string;
-  tags: {
-    category?: string;
-    subcategory?: string[];
-    [key: string]: unknown;
-  };
-  isActive: boolean;
-}
+export type DiscoveryContentData = InferSelectModel<typeof discoveryContent>;
 
 let cache: DiscoveryContentData[] | null = null;
 

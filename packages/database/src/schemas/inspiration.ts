@@ -1,6 +1,12 @@
 import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { platformEnum, processingStatus, swipeDirectionEnum } from '../enums.js';
 
+export interface DiscoveryTags {
+  category?: string;
+  subcategory?: string[];
+  [key: string]: unknown;
+}
+
 export const importedInspiration = pgTable('imported_inspiration', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').notNull(),
@@ -23,7 +29,7 @@ export const discoveryContent = pgTable('discovery_content', {
   country: text('country'),
   city: text('city'),
   coordinates: text('coordinates'),
-  tags: jsonb('tags'),
+  tags: jsonb('tags').$type<DiscoveryTags>(),
   isActive: boolean('is_active').default(true),
 });
 

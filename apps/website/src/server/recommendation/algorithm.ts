@@ -14,13 +14,11 @@
  * 5. Cities are scored from the feature map and normalised by size.
  */
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import type { DiscoveryTags } from '@voyagr/database'
 
-export interface DiscoveryTags {
-  category?: string
-  subcategory?: string[]
-  [key: string]: unknown
-}
+export type { DiscoveryTags }
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DiscoveryItem {
   id: string
