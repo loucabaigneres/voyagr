@@ -23,7 +23,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Turbo Cache
-        uses: turbo-actions/cache@v4
+        uses: actions/cache@v4
         with:
           path: .turbo
           key: turbo-${{ github.job }}-${{ github.sha }}
