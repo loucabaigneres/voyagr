@@ -10,6 +10,8 @@ import { createClient, schema } from '@voyagr/database'
 
 export const voyagrDb = createClient(process.env.DATABASE_URL ?? '')
 
-export const { discoveryContent, trip, tripDay, activity, swipes } = schema
+export { schema }
+export const { discoveryContent, trip, tripDay, activity, swipes, user } =
+  schema
 
 export type VoyagrDb = typeof voyagrDb

@@ -1,10 +1,18 @@
 import { loadDiscoveryData } from '@voyagr/database'
 import type { DiscoveryContentData } from '@voyagr/database'
 import { TRPCError } from '@trpc/server'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { activity, discoveryContent, swipes, trip, tripDay } from '#/db/voyagr'
+import {
+  activity,
+  discoveryContent,
+  swipes,
+  trip,
+  tripDay,
+  user,
+} from '#/db/voyagr'
+import type { VoyagrDb } from '#/db/voyagr'
 import { recommend, rankDestinations } from '#/server/recommendation/algorithm'
 import type {
   DiscoveryItem,
@@ -355,8 +363,88 @@ const discoveryRouter = {
     }),
 } satisfies TRPCRouterRecord
 
+// ─── Admin ─────────────────────────────────────────────────────────────────────
+
+/** Throws FORBIDDEN if the calling user is not an admin. */
+async function requireAdmin(ctx: { db: VoyagrDb; userId: string }) {
+  if (ctx.userId === 'guest') {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Non authentifié.' })
+  }
+  const [me] = await ctx.db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, ctx.userId))
+  if (me.role !== 'admin') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Accès réservé aux administrateurs.',
+    })
+  }
+}
+
+const adminRouter = {
+  listUsers: publicProcedure.query(async ({ ctx }) => {
+    await requireAdmin(ctx)
+    return ctx.db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        banned: user.banned,
+        banReason: user.banReason,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .orderBy(user.createdAt)
+  }),
+
+  setRole: publicProcedure
+    .input(
+      z.object({ userId: z.string(), role: z.enum(['traveler', 'admin']) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await requireAdmin(ctx)
+      await ctx.db
+        .update(user)
+        .set({ role: input.role, updatedAt: new Date() })
+        .where(eq(user.id, input.userId))
+    }),
+
+  banUser: publicProcedure
+    .input(z.object({ userId: z.string(), reason: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      await requireAdmin(ctx)
+      await ctx.db
+        .update(user)
+        .set({
+          banned: true,
+          banReason: input.reason ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, input.userId))
+    }),
+
+  unbanUser: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await requireAdmin(ctx)
+      await ctx.db
+        .update(user)
+        .set({
+          banned: false,
+          banReason: null,
+          banExpires: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, input.userId))
+    }),
+} satisfies TRPCRouterRecord
+
 export const trpcRouter = createTRPCRouter({
   todos: todosRouter,
   discovery: discoveryRouter,
+  admin: adminRouter,
 })
 export type TRPCRouter = typeof trpcRouter
