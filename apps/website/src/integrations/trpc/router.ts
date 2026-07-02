@@ -1,11 +1,19 @@
 import { loadDiscoveryData } from '@voyagr/database'
 import type { DiscoveryContentData } from '@voyagr/database'
 import { TRPCError } from '@trpc/server'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { activity, discoveryContent, swipes, trip, tripDay } from '#/db/voyagr'
-import { recommend } from '#/server/recommendation/algorithm'
+import {
+  activity,
+  discoveryContent,
+  swipes,
+  trip,
+  tripDay,
+  user,
+} from '#/db/voyagr'
+import type { VoyagrDb } from '#/db/voyagr'
+import { recommend, rankDestinations } from '#/server/recommendation/algorithm'
 import type {
   DiscoveryItem,
   SwipeRecord,
@@ -48,11 +56,101 @@ function toDiscoveryItem(row: DiscoveryContentData): DiscoveryItem {
   }
 }
 
+/**
+ * Round-robin interleave so no city appears more than once in a row.
+ * Items within each city bucket are shuffled to add variety across sessions.
+ */
+function interleaveByCityRoundRobin(items: DiscoveryItem[]): DiscoveryItem[] {
+  const buckets = new Map<string, DiscoveryItem[]>()
+  for (const item of items) {
+    const key = item.city ?? '__unknown__'
+    let bucket = buckets.get(key)
+    if (!bucket) {
+      bucket = []
+      buckets.set(key, bucket)
+    }
+    bucket.push(item)
+  }
+  // Shuffle within each bucket (Fisher-Yates).
+  for (const bucket of buckets.values()) {
+    for (let i = bucket.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[bucket[i], bucket[j]] = [bucket[j], bucket[i]]
+    }
+  }
+  // Also shuffle the city order so different cities lead each session.
+  const cityOrder = [...buckets.keys()]
+  for (let i = cityOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[cityOrder[i], cityOrder[j]] = [cityOrder[j], cityOrder[i]]
+  }
+  const result: DiscoveryItem[] = []
+  let remaining = true
+  while (remaining) {
+    remaining = false
+    for (const city of cityOrder) {
+      const bucket = buckets.get(city)!
+      if (bucket.length > 0) {
+        result.push(bucket.shift()!)
+        remaining = true
+      }
+    }
+  }
+  return result
+}
+
+/**
+ * Ensures no more than `maxRun` consecutive items share the same category.
+ * When a run limit is hit, the next item is picked from the nearest
+ * position in the remaining pool that has a different category.
+ */
+function applyMaxRunByCategory(
+  items: DiscoveryItem[],
+  maxRun: number,
+): DiscoveryItem[] {
+  const pool = [...items]
+  const result: DiscoveryItem[] = []
+
+  while (pool.length > 0) {
+    let blockedCategory: string | null = null
+    if (result.length >= maxRun) {
+      const tail = result.slice(-maxRun)
+      const tailCat = tail[0].tags?.category ?? null
+      if (
+        tailCat &&
+        tail.every((item) => (item.tags?.category ?? null) === tailCat)
+      ) {
+        blockedCategory = tailCat
+      }
+    }
+
+    if (!blockedCategory) {
+      result.push(pool.shift()!)
+    } else {
+      const idx = pool.findIndex(
+        (item) => (item.tags?.category ?? null) !== blockedCategory,
+      )
+      if (idx === -1) {
+        result.push(pool.shift()!)
+      } else {
+        result.push(...pool.splice(idx, 1))
+      }
+    }
+  }
+
+  return result
+}
+
 /** Active catalog, sourced from data.json (no database required). */
 function getCatalog(): DiscoveryItem[] {
-  return loadDiscoveryData()
-    .filter((item) => item.isActive !== false)
-    .map(toDiscoveryItem)
+  return applyMaxRunByCategory(
+    interleaveByCityRoundRobin(
+      loadDiscoveryData()
+        .filter((item) => item.isActive !== false)
+        .map(toDiscoveryItem),
+    ),
+    3,
+  )
 }
 
 /** A swipe sent by the client (swipes are tracked client-side, not persisted). */
@@ -123,6 +221,32 @@ const discoveryRouter = {
       })
 
       return { ...result, destinations }
+    }),
+
+  /**
+   * Lightweight city ranking used to sort the feed after the exploration phase.
+   * Returns city scores only (no enrichment), fast enough to re-run after each swipe.
+   */
+  rankCities: publicProcedure
+    .input(z.object({ swipes: z.array(swipeInput) }))
+    .query(({ input }) => {
+      const catalog = getCatalog()
+      const byId = new Map(catalog.map((item) => [item.id, item]))
+
+      const history: SwipeRecord[] = []
+      for (const s of input.swipes) {
+        const item = byId.get(s.id)
+        if (!item) continue
+        history.push({ item, liked: s.liked, viewDurationMs: s.viewDurationMs })
+      }
+
+      return rankDestinations(history, catalog).map(
+        ({ city, score, vetoed }) => ({
+          city,
+          score,
+          vetoed,
+        }),
+      )
     }),
 
   /**
@@ -239,8 +363,88 @@ const discoveryRouter = {
     }),
 } satisfies TRPCRouterRecord
 
+// ─── Admin ─────────────────────────────────────────────────────────────────────
+
+/** Throws FORBIDDEN if the calling user is not an admin. */
+async function requireAdmin(ctx: { db: VoyagrDb; userId: string }) {
+  if (ctx.userId === 'guest') {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Non authentifié.' })
+  }
+  const [me] = await ctx.db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, ctx.userId))
+  if (me.role !== 'admin') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Accès réservé aux administrateurs.',
+    })
+  }
+}
+
+const adminRouter = {
+  listUsers: publicProcedure.query(async ({ ctx }) => {
+    await requireAdmin(ctx)
+    return ctx.db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        banned: user.banned,
+        banReason: user.banReason,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .orderBy(user.createdAt)
+  }),
+
+  setRole: publicProcedure
+    .input(
+      z.object({ userId: z.string(), role: z.enum(['traveler', 'admin']) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await requireAdmin(ctx)
+      await ctx.db
+        .update(user)
+        .set({ role: input.role, updatedAt: new Date() })
+        .where(eq(user.id, input.userId))
+    }),
+
+  banUser: publicProcedure
+    .input(z.object({ userId: z.string(), reason: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      await requireAdmin(ctx)
+      await ctx.db
+        .update(user)
+        .set({
+          banned: true,
+          banReason: input.reason ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, input.userId))
+    }),
+
+  unbanUser: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await requireAdmin(ctx)
+      await ctx.db
+        .update(user)
+        .set({
+          banned: false,
+          banReason: null,
+          banExpires: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, input.userId))
+    }),
+} satisfies TRPCRouterRecord
+
 export const trpcRouter = createTRPCRouter({
   todos: todosRouter,
   discovery: discoveryRouter,
+  admin: adminRouter,
 })
 export type TRPCRouter = typeof trpcRouter

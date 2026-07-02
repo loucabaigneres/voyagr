@@ -1,91 +1,116 @@
 import { authClient } from '#/lib/auth-client'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function BetterAuthHeader() {
   const { data: session, isPending } = authClient.useSession()
   const navigate = useNavigate()
-  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
 
   if (isPending) {
-    return <div className="h-8 w-8 animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-800" />
+    return <div className="h-8 w-8 rounded-full bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
   }
 
-  if (session?.user) {
-    const { name, email, image } = session.user
-    const initial = name?.charAt(0).toUpperCase() ?? email?.charAt(0).toUpperCase() ?? 'U'
-
-    const close = () => {
-      if (detailsRef.current) detailsRef.current.open = false
-    }
-
+  if (!session?.user) {
     return (
-      <details ref={detailsRef} className="relative">
-        <summary className="list-none cursor-pointer">
-          {image ? (
-            <img
-              src={image}
-              alt={name ?? 'Avatar'}
-              className="h-8 w-8 rounded-full object-cover ring-2 ring-[#6c63ff]/40 hover:ring-[#6c63ff] transition"
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-[#6c63ff] flex items-center justify-center ring-2 ring-[#6c63ff]/40 hover:ring-[#6c63ff] transition">
-              <span className="text-xs font-semibold text-white">{initial}</span>
-            </div>
-          )}
-        </summary>
-
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-2 shadow-xl z-50 backdrop-blur-sm">
-          {/* Infos utilisateur */}
-          <div className="px-3 py-2 mb-1 border-b border-[var(--line)]">
-            <p className="text-sm font-semibold text-[var(--sea-ink)] truncate">{name}</p>
-            <p className="text-xs text-[var(--sea-ink-soft)] truncate">{email}</p>
-          </div>
-
-          {/* Liens */}
-          <Link
-            to="/account"
-            onClick={close}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--sea-ink-soft)] no-underline transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-            </svg>
-            Mon Compte
-          </Link>
-
-          <button
-            onClick={async () => {
-              close()
-              await authClient.signOut()
-              void navigate({ to: '/' })
-            }}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 transition hover:bg-red-500/10 hover:text-red-400"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Se déconnecter
-          </button>
-        </div>
-      </details>
+      <div className="flex items-center gap-2">
+        <Link
+          to="/login"
+          className="h-9 px-4 text-sm font-medium rounded-lg border border-[rgba(108,99,255,.4)] bg-[rgba(108,99,255,.15)] text-[#a78bfa] hover:bg-[rgba(108,99,255,.25)] transition-colors inline-flex items-center"
+        >
+          Se connecter
+        </Link>
+        <Link
+          to="/register"
+          className="h-9 px-4 text-sm font-medium rounded-lg bg-[#6c63ff] text-white hover:brightness-110 transition inline-flex items-center"
+        >
+          S'inscrire
+        </Link>
+      </div>
     )
   }
 
+  const user = session.user as { name?: string; email?: string; image?: string; role?: string }
+  const isAdmin = user.role === 'admin'
+  const initial = user.name?.charAt(0).toUpperCase() ?? 'U'
+
   return (
-    <div className="flex items-center gap-2">
-      <Link
-        to="/login"
-        className="h-9 px-4 text-sm font-medium bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors inline-flex items-center rounded-lg"
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-full border border-white/10 bg-[#1b1b27] px-2 py-1 transition hover:border-[#6c63ff]/40"
       >
-        Connexion
-      </Link>
-      <Link
-        to="/register"
-        className="h-9 px-4 text-sm font-medium bg-[#6c63ff] text-white hover:bg-[#5b52e8] transition-colors inline-flex items-center rounded-lg"
-      >
-        S'inscrire
-      </Link>
+        {user.image ? (
+          <img src={user.image} alt="" className="h-7 w-7 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#6c63ff]/20 text-xs font-bold text-[#a78bfa]">
+            {initial}
+          </div>
+        )}
+        <span className="max-w-[100px] truncate text-sm font-medium text-[#e8e8f0]">
+          {user.name}
+        </span>
+        <svg
+          className={`h-3.5 w-3.5 text-[#9a9ac0] transition-transform ${open ? 'rotate-180' : ''}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
+        >
+          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-[#1b1b27] py-1 shadow-xl z-50">
+          <div className="border-b border-white/10 px-4 py-2.5">
+            <p className="truncate text-xs font-semibold text-[#e8e8f0]">{user.name}</p>
+            <p className="truncate text-[0.7rem] text-[#9a9ac0]">{user.email}</p>
+            {isAdmin && (
+              <span className="mt-1 inline-block rounded-full border border-[rgba(108,99,255,.35)] bg-[rgba(108,99,255,.15)] px-2 py-0.5 text-[0.6rem] font-semibold text-[#a78bfa]">
+                admin
+              </span>
+            )}
+          </div>
+
+          <Link
+            to="/discovery"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#e8e8f0] hover:bg-white/5 transition"
+          >
+            ✈ Découvrir
+          </Link>
+
+          {isAdmin && (
+            <Link
+              to="/admin"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#a78bfa] hover:bg-white/5 transition"
+            >
+              🛡️ Panel admin
+            </Link>
+          )}
+
+          <div className="border-t border-white/10 mt-1 pt-1">
+            <button
+              onClick={async () => {
+                setOpen(false)
+                await authClient.signOut()
+                void navigate({ to: '/login' })
+              }}
+              className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-[#e74c3c] hover:bg-white/5 transition"
+            >
+              ← Se déconnecter
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
