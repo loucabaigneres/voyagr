@@ -38,10 +38,10 @@ function TripConfigurePage() {
       if (result.result?.data?.success) {
         const tripId = result.result.data.tripId;
         console.log("✅ SUCCÈS ! ID :", tripId);
-        navigate({ 
-          to: '/trip/test-recap', 
-          search: { tripId: tripId } 
-        });
+        // navigate({ 
+        //   to: '/trip/test-recap', 
+        //   search: { tripId: tripId } 
+        // });
       } else {
         console.error("❌ L'API a refusé :", result);
         alert("Erreur côté API, regarde la console.");
