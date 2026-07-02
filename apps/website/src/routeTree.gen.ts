@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TripConfigureRouteImport } from './routes/trip/configure'
 import { Route as TripTripIdRouteImport } from './routes/trip.$tripId'
 import { Route as DemoTrpcTodoRouteImport } from './routes/demo/trpc-todo'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
@@ -35,6 +36,11 @@ const AboutRoute = AboutRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TripConfigureRoute = TripConfigureRouteImport.update({
+  id: '/trip/configure',
+  path: '/trip/configure',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TripTripIdRoute = TripTripIdRouteImport.update({
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/demo/posthog': typeof DemoPosthogRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/demo/trpc-todo': typeof DemoTrpcTodoRoute
+  '/trip/configure': typeof TripConfigureRoute
   '/trip/$tripId': typeof TripTripIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/demo/posthog': typeof DemoPosthogRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/demo/trpc-todo': typeof DemoTrpcTodoRoute
+  '/trip/configure': typeof TripConfigureRoute
   '/trip/$tripId': typeof TripTripIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/demo/posthog': typeof DemoPosthogRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/demo/trpc-todo': typeof DemoTrpcTodoRoute
+  '/trip/configure': typeof TripConfigureRoute
   '/trip/$tripId': typeof TripTripIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/demo/posthog'
     | '/demo/tanstack-query'
     | '/demo/trpc-todo'
+    | '/trip/configure'
     | '/trip/$tripId'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/demo/posthog'
     | '/demo/tanstack-query'
     | '/demo/trpc-todo'
+    | '/trip/configure'
     | '/trip/$tripId'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/demo/posthog'
     | '/demo/tanstack-query'
     | '/demo/trpc-todo'
+    | '/trip/configure'
     | '/trip/$tripId'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -180,6 +192,7 @@ export interface RootRouteChildren {
   DemoPosthogRoute: typeof DemoPosthogRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   DemoTrpcTodoRoute: typeof DemoTrpcTodoRoute
+  TripConfigureRoute: typeof TripConfigureRoute
   TripTripIdRoute: typeof TripTripIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trip/configure': {
+      id: '/trip/configure'
+      path: '/trip/configure'
+      fullPath: '/trip/configure'
+      preLoaderRoute: typeof TripConfigureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trip/$tripId': {
@@ -284,6 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoPosthogRoute: DemoPosthogRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   DemoTrpcTodoRoute: DemoTrpcTodoRoute,
+  TripConfigureRoute: TripConfigureRoute,
   TripTripIdRoute: TripTripIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,

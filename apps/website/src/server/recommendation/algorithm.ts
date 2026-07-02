@@ -67,14 +67,14 @@ type FeatureType = 'country' | 'city' | 'category' | 'subcategory'
 // ─── Weights ──────────────────────────────────────────────────────────────────
 
 const W: Record<FeatureType, { like: number; skip: number }> = {
-  country: { like: 2.0, skip: -0.8 },
-  city: { like: 3.5, skip: -1.5 },
-  category: { like: 1.0, skip: -0.4 },
-  subcategory: { like: 1.5, skip: -0.6 },
+  country: { like: 2.0, skip: -1.5 },
+  city: { like: 3.5, skip: -3.0 },
+  category: { like: 1.0, skip: -0.6 },
+  subcategory: { like: 1.5, skip: -0.9 },
 }
 
 /** A city gets vetoed (excluded) after this many skips. */
-export const VETO_THRESHOLD = 3
+export const VETO_THRESHOLD = 2
 
 /** Confidence saturates at 1.0 after this many swipes. */
 export const CONFIDENCE_SATURATION = 20
