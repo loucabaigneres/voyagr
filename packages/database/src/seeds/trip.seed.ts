@@ -14,7 +14,7 @@ export async function seedTrips(db: ReturnType<typeof import('../index.js').crea
         title: 'Weekend à Paris',
         destination: 'Paris, France',
         startDate: '2026-06-15',
-        endDate: '2026-06-18',
+        durationDays: 5,
         status: 'draft',
         isPremium: false,
       },

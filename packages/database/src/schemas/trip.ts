@@ -21,11 +21,11 @@ export const trip = pgTable('trip', {
   destination: text('destination'),
   numberOfPeople: integer('number_people'),
   /** != MVP */
-  age: jsonb('age'),
+  ages: jsonb('ages'),
   intensity: tripIntensityEnum('intensity'),
   averagePrice: averagePriceEnum('average_price'),
   startDate: date('start_date'),
-  endDate: date('end_date'),
+  durationDays: integer('duration_days'),
   /** != MVP */
   dietaryRestrictions: text('dietary_restrictions'),
   /** != MVP */

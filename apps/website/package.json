@@ -22,6 +22,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@posthog/react": "^1.7.0",
     "@sentry/tanstackstart-react": "^10.42.0",
     "@t3-oss/env-core": "^0.13.10",
@@ -35,6 +36,7 @@
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
     "@trpc/client": "^11.11.0",
+    "@trpc/react-query": "^11.18.0",
     "@trpc/server": "^11.11.0",
     "@trpc/tanstack-react-query": "^11.11.0",
     "@voyagr/database": "workspace:*",
@@ -49,6 +51,7 @@
     "posthog-js": "^1.358.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-hook-form": "^7.80.0",
     "superjson": "^2.2.2",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.1.18",
