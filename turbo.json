@@ -23,7 +23,7 @@
       "dependsOn": []
     },
     "typecheck": {
-      "dependsOn": []
+      "dependsOn": ["^build"]
     },
     "format": {
       "outputs": []
