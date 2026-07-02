@@ -4,10 +4,32 @@ on:
   push:
     branches:
       - main
+      # - develop
+  workflow_dispatch:
 
 jobs:
+  setup-environment:
+    name: Define Environment
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+      docker_tag: ${{ steps.set-env.outputs.docker_tag }}
+      vercel_args: ${{ steps.set-env.outputs.vercel_args }}
+    steps:
+      - id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "env_name=production" >> $GITHUB_OUTPUT
+            echo "docker_tag=latest" >> $GITHUB_OUTPUT
+            echo "vercel_args=--prod" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+            echo "docker_tag=staging" >> $GITHUB_OUTPUT
+            echo "vercel_args=" >> $GITHUB_OUTPUT
+          fi
+
   quality-check:
-    name: Quality Check (Only API)
+    name: Quality Check (Monorepo)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -15,24 +37,32 @@ jobs:
 
       - name: pnpm configuration
         uses: pnpm/action-setup@v6
-      
+
       - name: Node.js configuration
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: "pnpm"
-      
+
+      - name: Turbo Cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter="!website"
 
       - name: Global verifications via Turbo
-        run: pnpx turbo run format lint build --filter=@voyagr/api --filter=@voyagr/database
+        run: pnpx turbo run format lint build typecheck --filter=@voyagr/api --filter=@voyagr/database --filter=@voyagr/web
 
   build-and-push-docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: quality-check
-    environment: production
+    needs: [setup-environment, quality-check]
+    environment: ${{ needs.setup-environment.outputs.env_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -53,15 +83,15 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/voyagr-api:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/voyagr-api:${{ needs.setup-environment.outputs.docker_tag }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voyagr-api:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voyagr-api:buildcache,mode=max
 
-  deploy:
-    name: Deploy to Production
-    needs: build-and-push-docker
+  deploy-backend:
+    name: Deploy Backend & Database
+    needs: [setup-environment, build-and-push-docker]
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ needs.setup-environment.outputs.env_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -69,15 +99,46 @@ jobs:
       - name: pnpm configuration
         uses: pnpm/action-setup@v6
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter="!website"
+
       - name: Drizzle Push to Supabase
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter @voyagr/database db:migrate
+        run: pnpm --filter @voyagr/database db:migrate
         env:
-          SUPABASE_PROD_DATABASE_URL: ${{ secrets.SUPABASE_PROD_DATABASE_URL }}
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
           EXTENSIONS_FILTERS: '["postgis"]'
 
       - name: Trigger Deploy Hook
         run: |
           echo "Notification sent to Render to load the new Docker image"
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+  
+  deploy-frontend:
+    name: Deploy Web to Vercel
+    needs: [setup-environment, deploy-backend]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup-environment.outputs.env_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=${{ needs.setup-environment.outputs.env_name }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build Project Artifacts (Vercel)
+        run: vercel build ${{ needs.setup-environment.outputs.vercel_args }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt ${{ needs.setup-environment.outputs.vercel_args }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
