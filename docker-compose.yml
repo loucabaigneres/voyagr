@@ -32,6 +32,8 @@ services:
     environment:
       - DATABASE_URL=postgres://admin:password@db:5432/voyagr
       - CI=true
+      - BETTER_AUTH_SECRET=1234
+      - BETTER_AUTH_URL=http://localhost:3000
     volumes:
       - .:/app
       - /app/node_modules
