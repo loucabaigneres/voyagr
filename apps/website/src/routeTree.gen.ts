@@ -12,8 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TripTestRecapRouteImport } from './routes/trip/test-recap'
 import { Route as TripConfigureRouteImport } from './routes/trip/configure'
+import { Route as TripTripIdRouteImport } from './routes/trip.$tripId'
 import { Route as DemoTrpcTodoRouteImport } from './routes/demo/trpc-todo'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
 import { Route as DemoPosthogRouteImport } from './routes/demo/posthog'
@@ -38,14 +38,14 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TripTestRecapRoute = TripTestRecapRouteImport.update({
-  id: '/trip/test-recap',
-  path: '/trip/test-recap',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TripConfigureRoute = TripConfigureRouteImport.update({
   id: '/trip/configure',
   path: '/trip/configure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TripTripIdRoute = TripTripIdRouteImport.update({
+  id: '/trip/$tripId',
+  path: '/trip/$tripId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoTrpcTodoRoute = DemoTrpcTodoRouteImport.update({
@@ -99,7 +99,7 @@ export interface FileRoutesByFullPath {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/demo/trpc-todo': typeof DemoTrpcTodoRoute
   '/trip/configure': typeof TripConfigureRoute
-  '/trip/test-recap': typeof TripTestRecapRoute
+  '/trip/$tripId': typeof TripTripIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/demo/sentry/testing': typeof DemoSentryTestingRoute
@@ -114,7 +114,7 @@ export interface FileRoutesByTo {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/demo/trpc-todo': typeof DemoTrpcTodoRoute
   '/trip/configure': typeof TripConfigureRoute
-  '/trip/test-recap': typeof TripTestRecapRoute
+  '/trip/$tripId': typeof TripTripIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/demo/sentry/testing': typeof DemoSentryTestingRoute
@@ -130,7 +130,7 @@ export interface FileRoutesById {
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/demo/trpc-todo': typeof DemoTrpcTodoRoute
   '/trip/configure': typeof TripConfigureRoute
-  '/trip/test-recap': typeof TripTestRecapRoute
+  '/trip/$tripId': typeof TripTripIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/demo/sentry/testing': typeof DemoSentryTestingRoute
@@ -147,7 +147,7 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/demo/trpc-todo'
     | '/trip/configure'
-    | '/trip/test-recap'
+    | '/trip/$tripId'
     | '/api/auth/$'
     | '/api/trpc/$'
     | '/demo/sentry/testing'
@@ -162,7 +162,7 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/demo/trpc-todo'
     | '/trip/configure'
-    | '/trip/test-recap'
+    | '/trip/$tripId'
     | '/api/auth/$'
     | '/api/trpc/$'
     | '/demo/sentry/testing'
@@ -177,7 +177,7 @@ export interface FileRouteTypes {
     | '/demo/tanstack-query'
     | '/demo/trpc-todo'
     | '/trip/configure'
-    | '/trip/test-recap'
+    | '/trip/$tripId'
     | '/api/auth/$'
     | '/api/trpc/$'
     | '/demo/sentry/testing'
@@ -193,7 +193,7 @@ export interface RootRouteChildren {
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   DemoTrpcTodoRoute: typeof DemoTrpcTodoRoute
   TripConfigureRoute: typeof TripConfigureRoute
-  TripTestRecapRoute: typeof TripTestRecapRoute
+  TripTripIdRoute: typeof TripTripIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
   DemoSentryTestingRoute: typeof DemoSentryTestingRoute
@@ -222,18 +222,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/trip/test-recap': {
-      id: '/trip/test-recap'
-      path: '/trip/test-recap'
-      fullPath: '/trip/test-recap'
-      preLoaderRoute: typeof TripTestRecapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/trip/configure': {
       id: '/trip/configure'
       path: '/trip/configure'
       fullPath: '/trip/configure'
       preLoaderRoute: typeof TripConfigureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trip/$tripId': {
+      id: '/trip/$tripId'
+      path: '/trip/$tripId'
+      fullPath: '/trip/$tripId'
+      preLoaderRoute: typeof TripTripIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/trpc-todo': {
@@ -305,7 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   DemoTrpcTodoRoute: DemoTrpcTodoRoute,
   TripConfigureRoute: TripConfigureRoute,
-  TripTestRecapRoute: TripTestRecapRoute,
+  TripTripIdRoute: TripTripIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
   DemoSentryTestingRoute: DemoSentryTestingRoute,

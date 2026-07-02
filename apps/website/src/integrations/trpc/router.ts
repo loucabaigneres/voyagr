@@ -3,7 +3,7 @@ import type { DiscoveryContentData } from '@voyagr/database'
 import { TRPCError } from '@trpc/server'
 import { inArray } from 'drizzle-orm'
 import { z } from 'zod'
-
+import { itineraryRouter } from './routers/itinerary'
 import { activity, discoveryContent, swipes, trip, tripDay } from '#/db/voyagr'
 import { recommend, rankDestinations } from '#/server/recommendation/algorithm'
 import type {
@@ -44,6 +44,7 @@ function toDiscoveryItem(row: DiscoveryContentData): DiscoveryItem {
     description: row.description,
     country: row.country,
     city: row.city,
+    coordinates: row.coordinates,
     tags: row.tags,
   }
 }
@@ -357,6 +358,10 @@ const discoveryRouter = {
 
 export const trpcRouter = createTRPCRouter({
   todos: todosRouter,
-  discovery: discoveryRouter,
+  discovery: createTRPCRouter({
+    ...discoveryRouter,
+    ...itineraryRouter,
+  }),
 })
+
 export type TRPCRouter = typeof trpcRouter

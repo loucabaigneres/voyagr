@@ -29,6 +29,7 @@ export interface DiscoveryItem {
   description: string | null
   country: string | null
   city: string | null
+  coordinates: string | null
   tags: DiscoveryTags | null
 }
 
