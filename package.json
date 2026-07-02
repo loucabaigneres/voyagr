@@ -30,5 +30,8 @@
     "*.{json,md}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "jose": "^6.2.3"
   }
 }
