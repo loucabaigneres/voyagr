@@ -8,6 +8,11 @@ export const user = pgTable('user', {
   image: text('image'),
   createdAt: timestamp('created_at', { precision: 6, withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { precision: 6, withTimezone: true }).notNull(),
+  // better-auth admin plugin
+  role: text('role').default('traveler'),
+  banned: boolean('banned').default(false),
+  banReason: text('ban_reason'),
+  banExpires: timestamp('ban_expires', { precision: 6, withTimezone: true }),
 });
 
 export const session = pgTable('session', {
@@ -21,6 +26,8 @@ export const session = pgTable('session', {
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { precision: 6, withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { precision: 6, withTimezone: true }).notNull(),
+  // better-auth admin plugin
+  impersonatedBy: text('impersonated_by'),
 });
 
 export const account = pgTable('account', {
