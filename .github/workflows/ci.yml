@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality-check:
-    name: Quality Check (Only API)
+    name: Quality Check (Monorepo)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,9 +21,17 @@ jobs:
         with:
           node-version: 24
           cache: 'pnpm'
+
+      - name: Turbo Cache
+        uses: turbo-actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-
       
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter=@voyagr/api...
+        run: pnpm install --frozen-lockfile --filter="!website"
 
       - name: Global verifications via Turbo
-        run: pnpx turbo run format lint --filter=@voyagr/api
+        run: pnpx turbo run format lint typecheck build --filter=@voyagr/api --filter=@voyagr/web
