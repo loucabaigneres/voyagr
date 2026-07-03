@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import * as z from 'zod';
-import { Context } from './context.js';
+import type { Context } from './context.js';
 
 // Init tRPC with the context type
 const t = initTRPC.context<Context>().create();
