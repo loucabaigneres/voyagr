@@ -1,5 +1,6 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { betterAuth } from 'better-auth';
+import { env } from '../env.js';
 import { db } from './db.js';
 
 export const auth = betterAuth({
@@ -27,9 +28,5 @@ export const auth = betterAuth({
         }
       : {}),
   },
-  trustedOrigins: [
-    process.env.FRONTEND_URL ?? 'http://localhost:3001',
-    'http://localhost:5173',
-    'http://localhost:3000',
-  ],
+  trustedOrigins: [env.FRONTEND_URL],
 });
