@@ -10,4 +10,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true, // Exit if the port is already in use
   },
+  preview: {
+    port: 5173,
+    strictPort: true, // Exit if the port is already in use
+  },
 });

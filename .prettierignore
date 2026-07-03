@@ -2,3 +2,6 @@ node_modules/
 dist/
 .turbo/
 .expo/
+
+apps/web/src/routeTree.gen.ts
+packages/database/drizzle/*

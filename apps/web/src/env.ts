@@ -1,25 +1,12 @@
-import 'dotenv/config';
 import * as z from 'zod';
 
 // Define strict schema for environment variables
 const envSchema = z.object({
-  // Node configuration
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number(),
-
-  // Database configuration
-  DATABASE_URL: z.url(),
-
-  // Better Auth configuration
-  BETTER_AUTH_SECRET: z.string().min(10, 'BETTER_AUTH_SECRET must be at least 10 characters long'),
-  BETTER_AUTH_URL: z.url(),
-
-  // Frontend URL configuration
-  FRONTEND_URL: z.url(),
+  VITE_API_URL: z.url(),
 });
 
 // Parse and validate environment variables
-const parsedEnv = envSchema.safeParse(process.env);
+const parsedEnv = envSchema.safeParse(import.meta.env);
 
 if (!parsedEnv.success) {
   console.error('❌ Error parsing environment variables:');
