@@ -1,38 +1,16 @@
-import { initTRPC, TRPCError } from '@trpc/server';
 import * as z from 'zod';
-import { Context } from './context.js';
+import { eq } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 import { trip } from '@voyagr/database/src/schemas/trip.js';
 import { tripFormSchema } from './schemas/trip.js';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
+import { discoveryRouter } from './routers/discovery.js';
+import { itineraryRouter } from './routers/itinerary.js';
 
-// Init tRPC with the context type
-const t = initTRPC.context<Context>().create();
-
-// Create a public procedure (accessible without authentication)
-const publicProcedure = t.procedure;
-
-// Middleware to check if the user is authenticated
-const isAuthed = t.middleware(({ ctx, next }) => {
-  if (!ctx.user || !ctx.session) {
-    throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'Vous devez être connecté pour effectuer cette action.',
-    });
-  }
-
-  // If the user is authenticated, proceed to the next middleware or resolver
-  return next({
-    ctx: {
-      user: ctx.user,
-      session: ctx.session,
-    },
-  });
-});
-
-// Protected route (requires authentication)
-export const protectedProcedure = t.procedure.use(isAuthed);
+export { protectedProcedure };
 
 // Main router of the application
-export const appRouter = t.router({
+export const appRouter = createTRPCRouter({
   // 1. Example of a public procedure that returns a greeting message
   hello: publicProcedure.input(z.object({ name: z.string() })).query(({ input }) => {
     return { message: `Hello ${input.name}, welcome to Voyagr API!` };
@@ -52,25 +30,42 @@ export const appRouter = t.router({
     };
   }),
 
-  submitTripConfiguration: protectedProcedure
-    .input(tripFormSchema)
+  submitTripConfiguration: publicProcedure
+    .input(tripFormSchema.extend({ tripId: z.uuid().optional() }))
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id ?? 'guest';
+      const values = {
+        destination: input.destination,
+        numberOfPeople: input.numberOfPeople,
+        ages: input.ages,
+        startDate: input.startDate,
+        durationDays: input.durationDays,
+        averagePrice: input.averagePrice as typeof trip.$inferInsert.averagePrice,
+        dietaryRestrictions: input.dietaryRestrictions,
+        medicalConditions: input.medicalConditions,
+        interests: input.interests,
+        intensity: input.intensity as typeof trip.$inferInsert.intensity,
+      };
+
+      // A tripId means this trip was already created by the swipe flow
+      // (with liked places attached) — fill in the rest instead of forking a new one.
+      if (input.tripId) {
+        const [updatedTrip] = await ctx.db
+          .update(trip)
+          .set(values)
+          .where(eq(trip.id, input.tripId))
+          .returning({ id: trip.id });
+
+        if (!updatedTrip) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Voyage introuvable.' });
+        }
+
+        return { success: true, tripId: updatedTrip.id };
+      }
+
       const [newTrip] = await ctx.db
         .insert(trip)
-        .values({
-          userId: ctx.user.id,
-          destination: input.destination,
-          numberOfPeople: input.numberOfPeople,
-          ages: input.ages,
-          startDate: input.startDate,
-          durationDays: input.durationDays,
-          averagePrice: input.averagePrice as typeof trip.$inferInsert.averagePrice,
-          dietaryRestrictions: input.dietaryRestrictions,
-          medicalConditions: input.medicalConditions,
-          interests: input.interests,
-          intensity: input.intensity as typeof trip.$inferInsert.intensity,
-          status: 'draft',
-        })
+        .values({ userId, ...values, status: 'draft' })
         .returning({ id: trip.id });
 
       return {
@@ -79,7 +74,7 @@ export const appRouter = t.router({
       };
     }),
 
-  getTripConfiguration: protectedProcedure
+  getTripConfiguration: publicProcedure
     .input(
       z.object({
         tripId: z.uuid("L'identifiant du voyage doit être un UUID valide."),
@@ -87,8 +82,7 @@ export const appRouter = t.router({
     )
     .query(async ({ ctx, input }) => {
       const currentTrip = await ctx.db.query.trip.findFirst({
-        where: (tripFields, { eq, and }) =>
-          and(eq(tripFields.id, input.tripId), eq(tripFields.userId, ctx.user.id)),
+        where: (tripFields, { eq: eqField }) => eqField(tripFields.id, input.tripId),
       });
 
       if (!currentTrip) {
@@ -100,6 +94,11 @@ export const appRouter = t.router({
 
       return currentTrip;
     }),
+
+  discovery: createTRPCRouter({
+    ...discoveryRouter,
+    ...itineraryRouter,
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -3,13 +3,13 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 
 import { useTRPC } from '#/integrations/trpc/react'
-import type { TRPCRouter } from '#/integrations/trpc/router'
+import type { AppRouter } from '../../../api/src/trpc/router'
 import type { inferRouterOutputs } from '@trpc/server'
 import { TripPdfDocument } from '#/components/TripPdf'
 
 export const Route = createFileRoute('/trip/$tripId')({ component: TripPage })
 
-type RouterOutputs = inferRouterOutputs<TRPCRouter>
+type RouterOutputs = inferRouterOutputs<AppRouter>
 type TripData = RouterOutputs['discovery']['getTrip']
 type Day = TripData['days'][number]
 type Activity = Day['activities'][number]
@@ -44,7 +44,7 @@ function TripPage() {
     )
   }
 
-  if (tripQuery.isError || !tripQuery.data) {
+  if (tripQuery.isError) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#12121e] text-white">
         <p className="text-sm text-[#e74c3c]">Voyage introuvable.</p>
@@ -74,9 +74,10 @@ function TripPage() {
               {trip.destination && (
                 <p className="mt-0.5 text-sm text-[#9a9ac0]">📍 {trip.destination}</p>
               )}
-              {trip.startDate && trip.endDate && (
+              {trip.startDate && (
                 <p className="mt-0.5 text-xs text-[#9a9ac0]">
-                  {formatDate(trip.startDate)} → {formatDate(trip.endDate)}
+                  {formatDate(trip.startDate)}
+                  {trip.durationDays ? ` · ${trip.durationDays} jour${trip.durationDays > 1 ? 's' : ''}` : ''}
                 </p>
               )}
             </div>
@@ -108,13 +109,13 @@ function TripPage() {
             )}
 
             {/* Preview of liked items before generation */}
-            {days.length > 0 && days[0]!.activities.length > 0 && (
+            {days.length > 0 && days[0].activities.length > 0 && (
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/[.03] p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#9a9ac0]">
-                  {days[0]!.activities.length} lieu{days[0]!.activities.length > 1 ? 'x' : ''} liké{days[0]!.activities.length > 1 ? 's' : ''}
+                  {days[0].activities.length} lieu{days[0].activities.length > 1 ? 'x' : ''} liké{days[0].activities.length > 1 ? 's' : ''}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {days[0]!.activities.map((act) => (
+                  {days[0].activities.map((act) => (
                     <span
                       key={act.id}
                       className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2.5 py-1 text-xs text-[#9a9ac0]"
@@ -254,6 +255,17 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
 
         {desc && (
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#7a7a9a]">{desc}</p>
+        )}
+
+        {activity.sourceUrl && (
+          <a
+            href={activity.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 inline-block text-xs font-medium text-[#a9a2ff] underline decoration-[#a9a2ff]/40 underline-offset-2 hover:text-white"
+          >
+            Voir l'offre ↗
+          </a>
         )}
       </div>
     </div>

@@ -3,16 +3,16 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useTRPC } from '#/integrations/trpc/react'
-import type { DiscoveryItem } from '#/server/recommendation/algorithm'
-import type { TRPCRouter } from '#/integrations/trpc/router'
+import type { AppRouter } from '../../../api/src/trpc/router'
 import type { inferRouterOutputs } from '@trpc/server'
 
 export const Route = createFileRoute('/discovery')({ component: DiscoveryPage })
 
 // ─── Types derived from the tRPC router (single source of truth) ───────────────
-type RouterOutputs = inferRouterOutputs<TRPCRouter>
+type RouterOutputs = inferRouterOutputs<AppRouter>
 type RecommendationOutput = RouterOutputs['discovery']['recommendation']
 type SaveTripOutput = RouterOutputs['discovery']['saveTrip']
+type DiscoveryItem = RouterOutputs['discovery']['feed'][number]
 type Destination = RecommendationOutput['destinations'][number]
 type LikedPlace = Destination['likedHere'][number]
 type Subcategory = Destination['topSubcategories'][number]
@@ -123,10 +123,12 @@ function DiscoveryPage() {
   }, [feed, explorationComplete, rankCitiesQuery.data, swipedIds])
 
   // Persisting the recommended trip to the database (on explicit click).
+  // The trip is a draft at this point (destination + liked places only) —
+  // send the user to the configure form to fill in dates/budget/pace before generating.
   const saveTrip = useMutation(
     trpc.discovery.saveTrip.mutationOptions({
       onSuccess: (data) => {
-        navigate({ to: '/trip/$tripId', params: { tripId: data.tripId } })
+        navigate({ to: '/trip/configure', search: { tripId: data.tripId } })
       },
     }),
   )

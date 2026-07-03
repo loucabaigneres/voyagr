@@ -10,5 +10,5 @@ export const auth = betterAuth({
     enabled: true,
   },
   // TODO: Add OAuth providers (Google, Apple, etc.)
-  trustedOrigins: ['http://localhost:5173', 'http://localhost:3000'], // TODO: Update with correct frontend URL
+  trustedOrigins: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'], // TODO: Update with correct frontend URL
 });

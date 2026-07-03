@@ -22,7 +22,7 @@ type Trip = {
   title: string | null
   destination: string | null
   startDate: string | null
-  endDate: string | null
+  durationDays: number | null
 }
 
 export type TripPdfProps = {
@@ -36,7 +36,7 @@ function parseCoords(wkt: string | null): string | null {
   if (!wkt) return null
   const m = wkt.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i)
   if (!m) return null
-  return `${parseFloat(m[2]!).toFixed(5)}, ${parseFloat(m[1]!).toFixed(5)}`
+  return `${parseFloat(m[2]).toFixed(5)}, ${parseFloat(m[1]).toFixed(5)}`
 }
 
 function formatDate(dateStr: string | null): string {
@@ -205,9 +205,10 @@ export function TripPdfDocument({ trip, days }: TripPdfProps) {
           {trip.destination && (
             <Text style={s.subtitle}>Destination : {trip.destination}</Text>
           )}
-          {trip.startDate && trip.endDate && (
+          {trip.startDate && (
             <Text style={s.subtitle}>
-              {formatDate(trip.startDate)} — {formatDate(trip.endDate)}
+              {formatDate(trip.startDate)}
+              {trip.durationDays ? ` · ${trip.durationDays} jour${trip.durationDays > 1 ? 's' : ''}` : ''}
             </Text>
           )}
         </View>
