@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 export const baseConfig = defineConfig([
   {
     // Target all JavaScript and TypeScript files
-    files: ['**/*.ts', '**/*.js'],
+    files: ['**/*.ts', '**/*.js', '**/*.tsx', '**/*.jsx'],
   },
 
   {

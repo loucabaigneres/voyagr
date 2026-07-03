@@ -34,6 +34,8 @@ export const Route = createFileRoute('/')({
     ]);
 
     const handleSwipe = (id: string, direction: 'like' | 'dislike') => {
+      // TODO: Remove the console.log in production and replace it with an API call to record the swipe action
+      // eslint-disable-next-line no-console
       console.log(`Swiped ${direction} on card ${id}`);
       // On retire la carte du dessus pour révéler la suivante
       setCards((prev) => prev.filter((card) => card.id !== id));

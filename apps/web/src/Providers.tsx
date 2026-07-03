@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { useState, type ReactNode } from 'react';
+import { env } from './env';
 import { trpc } from './lib/trpc';
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -18,7 +19,7 @@ export function Providers({ children }: { children: ReactNode }) {
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: 'http://localhost:3000/trpc',
+          url: `${env.VITE_API_URL}/trpc`,
           // On intercepte l'appel fetch de tRPC pour y glisser notre paramètre
           fetch: (url, options) => {
             return fetch(url, {
