@@ -121,6 +121,9 @@ jobs:
     needs: [setup-environment, deploy-backend]
     runs-on: ubuntu-latest
     environment: ${{ needs.setup-environment.outputs.env_name }}
+    defaults:
+      run:
+        working-directory: ./apps/web
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
