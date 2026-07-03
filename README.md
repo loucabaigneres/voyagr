@@ -6,29 +6,29 @@ Welcome to the main repository for the Voyagr project! This repository uses a **
 
 - **Package Manager:** pnpm
 - **Monorepo Orchestrator:** Turborepo
-- **Frontend (`apps/mobile`):** React Native, Expo (SDK 55)
-- **Backend (`apps/api`):** Node.js 24 (ESM), Fastify, tRPC, Zod
+- **Frontend (`apps/web`):** React (Vite), TypeScript, TanStack Router, Tailwind CSS, Motion (`motion/react`), tRPC Client
+- **Backend (`apps/api`):** Node.js 24 (ESM), Fastify, tRPC, Zod, Better Auth
 - **Database (`packages/database`):** PostgreSQL, Drizzle ORM, `postgres.js`
-- **Code Quality:** ESLint (Flat Config), Prettier, Husky, Commitlint, lint-staged
+- **Code Quality:** ESLint v10 (Flat Config), Prettier, Husky, Commitlint, lint-staged
 - **Local Infrastructure:** Docker & Docker-Compose
 
 ---
 
 ## 🏗️ Project Architecture
 
-The codebase is divided into two main areas: executable applications and shared packages.
+The codebase is divided into executable applications and shared packages.
 
 ```bash
 voyagr/
 ├── apps/
-│   ├── api/                # The backend server (Fastify + tRPC)
-│   └── mobile/             # The React Native mobile application (Expo)
+│   ├── api/              # The backend server (Fastify + tRPC + Better Auth)
+│   └── web/              # The frontend web application (Vite + React)
 ├── packages/
-│   ├── database/           # Drizzle schema and PostgreSQL access
-│   └── eslint-config/      # Shared ESLint Flat Config for the monorepo
-├── docker-compose.yml      # Local infrastructure
-├── turbo.json              # Turborepo scripts configuration
-└── pnpm-workspace.yaml     # Monorepo configuration
+│   ├── database/         # Drizzle schema, DB instance, and migrations
+│   └── eslint-config/     # Shared ESLint Flat Config for the monorepo
+├── docker-compose.yml    # Local infrastructure (PostgreSQL + API)
+├── turbo.json            # Turborepo scripts configuration
+└── pnpm-workspace.yaml   # Monorepo configuration
 ```
 
 ## 🚀 Installation Guide (Onboarding)
@@ -40,7 +40,6 @@ Ensure you have the following tools installed on your machine:
 - [Node.js](https://nodejs.org/) (Version 24 LTS)
 - [pnpm](https://pnpm.io/installation) (`npm install -g pnpm`)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Docker-Compose)
-- **Expo Go** app installed on your mobile device (iOS/Android) or a local emulator/simulator.
 
 ### 2. Install Dependencies
 
@@ -53,7 +52,7 @@ pnpm install
 
 ### 3. Environment Variables
 
-The project uses Zod for strict environment validation. You need to create two `.env` files.
+The project uses Zod for strict environment validation. You need to create three `.env` files.
 
 Create `apps/api/.env`:
 
@@ -61,6 +60,14 @@ Create `apps/api/.env`:
 DATABASE_URL=postgres://admin:password@db:5432/voyagr
 PORT=3000
 NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+BETTER_AUTH_SECRET=generate_a_random_string_here
+```
+
+Create `apps/web/.env`:
+
+```env
+VITE_API_URL=http://localhost:3000
 ```
 
 Create `packages/database/.env`:
@@ -69,42 +76,37 @@ Create `packages/database/.env`:
 DATABASE_URL=postgres://admin:password@localhost:5432/voyagr
 ```
 
-### 4. Start the Database (Docker)
+### 4. Start the Backend Infrastructure (Docker)
 
-Start the PostgreSQL container in the background:
+Start both the PostgreSQL database and the Fastify API in the background:
 
 ```bash
 docker-compose up -d
 ```
 
+✅ The Backend API is now automatically running on `http://localhost:3000`
+
 ### 5. Initialize and Seed the Database
 
-Push the Drizzle schema to PostgreSQL and inject the test data:
+We use strict migration flows. First, generate the SQL migration files, apply them to the database, and finally inject the test data:
 
 ```bash
-pnpm --filter @voyagr/database db:push
+pnpm --filter @voyagr/database db:generate
+pnpm --filter @voyagr/database db:migrate
 pnpm --filter @voyagr/database db:seed
 ```
 
 > ℹ️ Note on `data.json`: The discovery content seed (`discovery.seed.ts`) imports extra locations from `packages/database/data.json` if the file is present. This file is gitignored (large scraped dataset) — without it, the seed simply skips this step and only inserts the test data.
 
-### 6. Run the API
+### 6. Run the Web Frontend
 
-Start the FastAPI server:
-
-```bash
-pnpm turbo run dev --filter=api
-```
-
-✅ The backend API should be accessible at `http://localhost:3000/trpc/getInspirations`
-
-Start the Mobile App (Expo):
+Since the backend is already running via Docker, you only need to start the Vite frontend locally:
 
 ```bash
-pnpm turbo run start --filter=@voyagr/mobile
+pnpm turbo run dev --filter=@voyagr/web
 ```
 
-✅ Scan the QR code in your terminal with the Expo Go app on your phone or press `i` for iOS simulator.
+✅ The Web App will be accessible at `http://localhost:5173`
 
 ---
 
@@ -144,15 +146,13 @@ _Example:_ `git commit -m "feat: add user authentication via BetterAuth"`
 
 Thanks to Turborepo, you can run commands from the root to target specific projects.
 
-| Action                          | Command                                        |
-| ------------------------------- | ---------------------------------------------- |
-| **Start the API**               | `pnpm turbo run dev --filter=api`              |
-| **Start the Mobile App**        | `pnpm turbo run start --filter=@voyagr/mobile` |
-| **Format the entire project**   | `pnpm run format`                              |
-| **Lint the entire project**     | `pnpm run lint`                                |
-| **Update local DB**             | `pnpm --filter @voyagr/database db:push`       |
-| **Generate migration (Prod)**   | `pnpm --filter @voyagr/database db:generate`   |
-| **Start Docker (Backend + DB)** | `docker-compose up -d`                         |
-| **Stop Docker**                 | `docker-compose down`                          |
-
-> ⚠️ Note on Drizzle: Locally, during rapid development, use `db:push`. For structural updates intended for production, use `db:generate` to create `.sql` migration files.
+| Action                        | Command                                      |
+| ----------------------------- | -------------------------------------------- |
+| **Start the API**             | `pnpm turbo run dev --filter=@voyagr/api`    |
+| **Start the Web App**         | `pnpm turbo run dev --filter=@voyagr/web`    |
+| **Format the entire project** | `pnpm run format`                            |
+| **Lint the entire project**   | `pnpm run lint`                              |
+| **Generate DB migration**     | `pnpm --filter @voyagr/database db:generate` |
+| **Apply DB migration**        | `pnpm --filter @voyagr/database db:migrate`  |
+| **Start Docker (DB + API)**   | `docker-compose up -d`                       |
+| **Stop Docker**               | `docker-compose down`                        |

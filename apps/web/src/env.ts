@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import * as z from 'zod';
 
 // Define strict schema for environment variables
@@ -7,7 +6,7 @@ const envSchema = z.object({
 });
 
 // Parse and validate environment variables
-const parsedEnv = envSchema.safeParse(process.env);
+const parsedEnv = envSchema.safeParse(import.meta.env);
 
 if (!parsedEnv.success) {
   console.error('❌ Error parsing environment variables:');
