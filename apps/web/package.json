@@ -17,7 +17,6 @@
     "@trpc/client": "^11.17.0",
     "@trpc/react-query": "^11.18.0",
     "better-auth": "^1.6.23",
-    "dotenv": "^17.4.2",
     "lucide-react": "^0.577.0",
     "motion": "^12.42.2",
     "react": "^19.2.7",
