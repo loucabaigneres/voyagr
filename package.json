@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=!website",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "typecheck": "turbo run typecheck",
