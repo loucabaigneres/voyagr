@@ -9,6 +9,13 @@ const envSchema = z.object({
 
   // Database configuration
   DATABASE_URL: z.url(),
+
+  // Better Auth configuration
+  BETTER_AUTH_SECRET: z.string().min(10, 'BETTER_AUTH_SECRET must be at least 10 characters long'),
+  BETTER_AUTH_URL: z.url(),
+
+  // Frontend URL configuration
+  FRONTEND_URL: z.url(),
 });
 
 // Parse and validate environment variables

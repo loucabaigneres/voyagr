@@ -1,5 +1,6 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { betterAuth } from 'better-auth';
+import { env } from '../env.js';
 import { db } from './db.js';
 
 export const auth = betterAuth({
@@ -9,6 +10,23 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  // TODO: Add OAuth providers (Google, Apple, etc.)
-  trustedOrigins: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'], // TODO: Update with correct frontend URL
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+      ? {
+          apple: {
+            clientId: process.env.APPLE_CLIENT_ID,
+            clientSecret: process.env.APPLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+  },
+  trustedOrigins: [env.FRONTEND_URL],
 });

@@ -2,6 +2,7 @@
 
 import 'dotenv/config';
 import { createClient } from '../index.js';
+import { seedAdmin } from './admin.seed.js';
 import { seedInspirations } from './inspiration.seed.js';
 import { seedDiscoveryContent } from './discovery.seed.js';
 import { seedTrips } from './trip.seed.js';
@@ -14,6 +15,7 @@ async function main() {
   console.log('🌱 Beginning global database seeding...\n');
 
   try {
+    await seedAdmin(db);
     await seedInspirations(db);
     await seedDiscoveryContent(db);
     await seedTrips(db);

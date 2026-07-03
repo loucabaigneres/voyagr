@@ -1,11 +1,11 @@
-import * as z from 'zod';
-import { eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { trip } from '@voyagr/database/src/schemas/trip.js';
-import { tripFormSchema } from './schemas/trip.js';
+import type { eq } from 'drizzle-orm';
+import * as z from 'zod';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
 import { discoveryRouter } from './routers/discovery.js';
 import { itineraryRouter } from './routers/itinerary.js';
+import { tripFormSchema } from './schemas/trip.js';
 
 export { protectedProcedure };
 

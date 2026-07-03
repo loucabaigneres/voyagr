@@ -101,7 +101,7 @@ function DiscoveryPage() {
   const swipedIds = useMemo(() => new Set(history.map((s) => s.id)), [history])
 
   // Build the effective feed: exploration order for the first EXPLORATION_SIZE cards,
-  // then algo-sorted so preferred cities bubble up and vetoed cities sink.
+  // then personalized cards interleaved with occasional discovery cards (every 3rd).
   const effectiveFeed = useMemo(() => {
     const cityRanks = rankCitiesQuery.data
     if (!explorationComplete || !cityRanks) return feed
@@ -110,14 +110,34 @@ function DiscoveryPage() {
     const vetoed = new Set(cityRanks.filter((r) => r.vetoed).map((r) => r.city))
 
     const alreadySeen = feed.filter((item) => swipedIds.has(item.id))
-    const remaining = feed
-      .filter((item) => !swipedIds.has(item.id))
-      .sort((a, b) => {
-        const aVetoed = vetoed.has(a.city ?? '')
-        const bVetoed = vetoed.has(b.city ?? '')
-        if (aVetoed !== bVetoed) return aVetoed ? 1 : -1
-        return (scoreOf[b.city ?? ''] ?? 0) - (scoreOf[a.city ?? ''] ?? 0)
-      })
+    const unseen = feed.filter((item) => !swipedIds.has(item.id))
+
+    // Cards matching revealed preferences (positive score, not vetoed).
+    const personalized = unseen
+      .filter((item) => !vetoed.has(item.city ?? '') && (scoreOf[item.city ?? ''] ?? 0) > 0)
+      .sort((a, b) => (scoreOf[b.city ?? ''] ?? 0) - (scoreOf[a.city ?? ''] ?? 0))
+
+    // Everything else — kept to avoid a pure filter bubble.
+    const surprise = unseen.filter(
+      (item) => vetoed.has(item.city ?? '') || (scoreOf[item.city ?? ''] ?? 0) <= 0,
+    )
+
+    // Interleave: 2 personalized → 1 discovery → repeat.
+    const PERSONALIZED_RUN = 2
+    const remaining: DiscoveryItem[] = []
+    const pPool = [...personalized]
+    const sPool = [...surprise]
+    let pStreak = 0
+
+    while (pPool.length > 0 || sPool.length > 0) {
+      if (pPool.length > 0 && (pStreak < PERSONALIZED_RUN || sPool.length === 0)) {
+        remaining.push(pPool.shift()!)
+        pStreak++
+      } else {
+        remaining.push(sPool.shift()!)
+        pStreak = 0
+      }
+    }
 
     return [...alreadySeen, ...remaining]
   }, [feed, explorationComplete, rankCitiesQuery.data, swipedIds])
