@@ -125,6 +125,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: pnpm configuration
+        uses: pnpm/action-setup@v6
+
+      - name: Node.js configuration
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
