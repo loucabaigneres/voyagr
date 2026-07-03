@@ -103,7 +103,7 @@ jobs:
         run: pnpm install --frozen-lockfile --filter="!website"
 
       - name: Drizzle Push to Supabase
-        run: pnpm --filter @voyagr/database db:migrate
+        run: pnpm --filter @voyagr/database db:push
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
           EXTENSIONS_FILTERS: '["postgis"]'
