@@ -15,6 +15,7 @@ jobs:
       env_name: ${{ steps.set-env.outputs.env_name }}
       docker_tag: ${{ steps.set-env.outputs.docker_tag }}
       vercel_args: ${{ steps.set-env.outputs.vercel_args }}
+      vercel_env: ${{ steps.set-env.outputs.vercel_env }}
     steps:
       - id: set-env
         run: |
@@ -22,10 +23,12 @@ jobs:
             echo "env_name=production" >> $GITHUB_OUTPUT
             echo "docker_tag=latest" >> $GITHUB_OUTPUT
             echo "vercel_args=--prod" >> $GITHUB_OUTPUT
+            echo "vercel_env=production" >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "docker_tag=staging" >> $GITHUB_OUTPUT
             echo "vercel_args=" >> $GITHUB_OUTPUT
+            echo "vercel_env=preview" >> $GITHUB_OUTPUT
           fi
 
   quality-check:
@@ -126,7 +129,7 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=${{ needs.setup-environment.outputs.env_name }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=${{ needs.setup-environment.outputs.vercel_env }} --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
