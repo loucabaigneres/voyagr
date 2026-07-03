@@ -105,7 +105,7 @@ jobs:
       - name: Drizzle Push to Supabase
         run: pnpm --filter @voyagr/database db:push
         env:
-          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
           EXTENSIONS_FILTERS: '["postgis"]'
 
       - name: Trigger Deploy Hook
