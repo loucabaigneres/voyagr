@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { trip } from '@voyagr/database/src/schemas/trip.js';
-import type { eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as z from 'zod';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
 import { discoveryRouter } from './routers/discovery.js';
