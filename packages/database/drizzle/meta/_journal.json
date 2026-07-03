@@ -8,6 +8,13 @@
       "when": 1782993745327,
       "tag": "0000_bumpy_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783087101341,
+      "tag": "0001_motionless_blink",
+      "breakpoints": true
     }
   ]
 }
