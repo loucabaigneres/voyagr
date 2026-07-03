@@ -31,6 +31,7 @@ CREATE TABLE "session" (
 	"user_agent" text,
 	"created_at" timestamp (6) with time zone NOT NULL,
 	"updated_at" timestamp (6) with time zone NOT NULL,
+	"impersonated_by" text,
 	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint

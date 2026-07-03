@@ -37,8 +37,6 @@ jobs:
 
       - name: pnpm configuration
         uses: pnpm/action-setup@v6
-        with:
-          version: 11
 
       - name: Node.js configuration
         uses: actions/setup-node@v6
@@ -100,14 +98,12 @@ jobs:
 
       - name: pnpm configuration
         uses: pnpm/action-setup@v6
-        with:
-          version: 11
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter="!website"
 
       - name: Drizzle Push to Supabase
-        run: pnpm --filter @voyagr/database db:push
+        run: pnpm --filter @voyagr/database db:migrate
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
           EXTENSIONS_FILTERS: '["postgis"]'
