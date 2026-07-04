@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { useState, type ReactNode } from 'react';
+import superjson from 'superjson';
 import { env } from './env';
 import { trpc } from './lib/trpc';
 
@@ -27,6 +28,9 @@ export function Providers({ children }: { children: ReactNode }) {
               credentials: 'include', // Indispensable pour Better Auth
             });
           },
+          transformer: superjson
+          // TODO: Add transformer and test its utility.
+          // Watch apps/website/src/integrations/tanstack-query/root-provider.tsx!!
         }),
       ],
     })
