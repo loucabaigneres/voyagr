@@ -2,7 +2,9 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import type { Context } from './context.js';
 
 // Init tRPC with the context type
-const t = initTRPC.context<Context>().create();
+const t = initTRPC.context<Context>().create({
+  // transformer: superjson
+});
 
 export const createTRPCRouter = t.router;
 

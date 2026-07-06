@@ -1,15 +1,14 @@
+import type { DiscoveryTags } from '@voyagr/database/src/schemas/inspiration';
 import { motion, useMotionValue, useTransform, type PanInfo } from 'motion/react';
+import type { RouterInputs, RouterOutputs } from '../lib/trpc';
 
-export interface InspirationCard {
-  id: string;
-  mediaUrl: string;
-  locationName: string;
-  tags: string[];
-}
+export type DiscoveryCard = RouterOutputs['getDiscoveryCards'][number];
+
+export type SwipeDirection = RouterInputs['swipeContent']['direction'];
 
 interface SwipeCardProps {
-  card: InspirationCard;
-  onSwipe: (id: string, direction: 'like' | 'dislike') => void;
+  card: DiscoveryCard;
+  onSwipe: (id: string, direction: SwipeDirection) => void;
   isFront: boolean; // Permet de savoir si c'est la carte du dessus (la seule qu'on peut glisser)
 }
 
@@ -37,6 +36,8 @@ export function SwipeCard({ card, onSwipe, isFront }: SwipeCardProps) {
     }
   };
 
+  const tags = card.tags as DiscoveryTags | null;
+
   return (
     <motion.div
       className="absolute w-full h-[70vh] max-h-150 max-w-sm rounded-3xl overflow-hidden shadow-xl bg-gray-200 origin-bottom"
@@ -53,8 +54,8 @@ export function SwipeCard({ card, onSwipe, isFront }: SwipeCardProps) {
     >
       {/* L'image de fond */}
       <img 
-        src={card.mediaUrl} 
-        alt={card.locationName} 
+        src={card.mainMediaUrl} 
+        alt={card.locationName || 'Destination inconnue'} 
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
       />
 
@@ -76,7 +77,7 @@ export function SwipeCard({ card, onSwipe, isFront }: SwipeCardProps) {
         </h2>
         
         <div className="flex flex-wrap gap-2 mb-3">
-          {card.tags.map((tag) => (
+          {tags?.subcategory?.map((tag) => (
             <span key={tag} className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-medium">
               #{tag}
             </span>

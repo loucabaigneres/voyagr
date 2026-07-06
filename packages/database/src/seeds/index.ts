@@ -2,12 +2,12 @@
 
 import 'dotenv/config';
 import { createClient } from '../index.js';
-import { seedAdmin } from './admin.seed.js';
-import { seedInspirations } from './inspiration.seed.js';
+// import { seedAdmin } from './admin.seed.js';
 import { seedDiscoveryContent } from './discovery.seed.js';
-import { seedTrips } from './trip.seed.js';
-import { seedPayments } from './payment.seed.js';
-import { seedDocuments } from './document.seed.js';
+// import { seedInspirations } from './inspiration.seed.js';
+// import { seedTrips } from './trip.seed.js';
+// import { seedPayments } from './payment.seed.js';
+// import { seedDocuments } from './document.seed.js';
 
 const db = createClient(process.env.DATABASE_URL!);
 
@@ -15,12 +15,12 @@ async function main() {
   console.log('🌱 Beginning global database seeding...\n');
 
   try {
-    await seedAdmin(db);
-    await seedInspirations(db);
+    // await seedAdmin(db);
+    // await seedInspirations(db);
     await seedDiscoveryContent(db);
-    await seedTrips(db);
-    await seedPayments(db);
-    await seedDocuments(db);
+    // await seedTrips(db);
+    // await seedPayments(db);
+    // await seedDocuments(db);
 
     console.log('\n✅ Global database seeding completed successfully !');
     process.exit(0);

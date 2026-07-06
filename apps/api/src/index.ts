@@ -11,7 +11,7 @@ import { AppRouter, appRouter } from './trpc/router.js';
 const server = Fastify({ logger: true });
 
 await server.register(cors, {
-  origin: [env.FRONTEND_URL], // Allow requests from the frontend URL
+  origin: [env.FRONTEND_URL, 'http://localhost:3001'], // Allow requests from the frontend URL
   credentials: true, // Allow cookies to be sent in cross-origin requests
   allowedHeaders: ['Content-Type', 'Authorization', 'trpc-accept'], // Allow these headers in requests
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow these HTTP methods

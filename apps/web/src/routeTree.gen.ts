@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TripConfigureRouteImport } from './routes/trip/configure'
+import { Route as TripTripIdRouteImport } from './routes/trip.$tripId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -23,40 +26,86 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiscoveryRoute = DiscoveryRouteImport.update({
+  id: '/discovery',
+  path: '/discovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TripConfigureRoute = TripConfigureRouteImport.update({
+  id: '/trip/configure',
+  path: '/trip/configure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TripTripIdRoute = TripTripIdRouteImport.update({
+  id: '/trip/$tripId',
+  path: '/trip/$tripId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/discovery': typeof DiscoveryRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/trip/$tripId': typeof TripTripIdRoute
+  '/trip/configure': typeof TripConfigureRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/discovery': typeof DiscoveryRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/trip/$tripId': typeof TripTripIdRoute
+  '/trip/configure': typeof TripConfigureRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/discovery': typeof DiscoveryRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/trip/$tripId': typeof TripTripIdRoute
+  '/trip/configure': typeof TripConfigureRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/discovery'
+    | '/login'
+    | '/register'
+    | '/trip/$tripId'
+    | '/trip/configure'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register'
-  id: '__root__' | '/' | '/login' | '/register'
+  to:
+    | '/'
+    | '/discovery'
+    | '/login'
+    | '/register'
+    | '/trip/$tripId'
+    | '/trip/configure'
+  id:
+    | '__root__'
+    | '/'
+    | '/discovery'
+    | '/login'
+    | '/register'
+    | '/trip/$tripId'
+    | '/trip/configure'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DiscoveryRoute: typeof DiscoveryRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  TripTripIdRoute: typeof TripTripIdRoute
+  TripConfigureRoute: typeof TripConfigureRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +124,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/discovery': {
+      id: '/discovery'
+      path: '/discovery'
+      fullPath: '/discovery'
+      preLoaderRoute: typeof DiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +138,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trip/configure': {
+      id: '/trip/configure'
+      path: '/trip/configure'
+      fullPath: '/trip/configure'
+      preLoaderRoute: typeof TripConfigureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trip/$tripId': {
+      id: '/trip/$tripId'
+      path: '/trip/$tripId'
+      fullPath: '/trip/$tripId'
+      preLoaderRoute: typeof TripTripIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DiscoveryRoute: DiscoveryRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  TripTripIdRoute: TripTripIdRoute,
+  TripConfigureRoute: TripConfigureRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
