@@ -11,22 +11,18 @@ export const auth = betterAuth({
     enabled: true,
   },
   socialProviders: {
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? {
-          google: {
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          },
-        }
-      : {}),
-    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
-      ? {
-          apple: {
-            clientId: process.env.APPLE_CLIENT_ID,
-            clientSecret: process.env.APPLE_CLIENT_SECRET,
-          },
-        }
-      : {}),
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+    // ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+    //   ? {
+    //       apple: {
+    //         clientId: process.env.APPLE_CLIENT_ID,
+    //         clientSecret: process.env.APPLE_CLIENT_SECRET,
+    //       },
+    //     }
+    //   : {}),
   },
   trustedOrigins: [env.FRONTEND_URL],
 });

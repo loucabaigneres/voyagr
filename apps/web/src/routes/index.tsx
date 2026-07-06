@@ -43,6 +43,16 @@ export const Route = createFileRoute('/')({
 
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center overflow-hidden">
+        {/* Logout button */}
+        <button 
+          onClick={async () => {
+            await authClient.signOut();
+            window.location.href = '/login';
+          }}
+          className="absolute top-4 right-4 py-2 px-4 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
+        >
+          Déconnexion
+        </button>
         {/* Container de la pile de cartes */}
         <div className="relative w-full max-w-sm h-[70vh] flex items-center justify-center">
           {cards.length === 0 ? (

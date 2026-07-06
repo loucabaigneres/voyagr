@@ -14,6 +14,10 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(10, 'BETTER_AUTH_SECRET must be at least 10 characters long'),
   BETTER_AUTH_URL: z.url(),
 
+  // Google OAuth configuration
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+
   // Frontend URL configuration
   FRONTEND_URL: z.url(),
 });
