@@ -1,7 +1,7 @@
+import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
 import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import type { TRPCRouterRecord } from '@trpc/server';
 
 import { activity, discoveryContent, trip, tripDay } from '../../lib/tables.js';
 import { publicProcedure } from '../init.js';
