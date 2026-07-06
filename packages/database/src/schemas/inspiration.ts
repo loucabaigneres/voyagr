@@ -1,11 +1,11 @@
 import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { platformEnum, processingStatus, swipeDirectionEnum } from '../enums.js';
 
-export interface DiscoveryTags {
+export type DiscoveryTags = {
   category?: string;
   subcategory?: string[];
   [key: string]: unknown;
-}
+};
 
 export const importedInspiration = pgTable('imported_inspiration', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -38,7 +38,7 @@ export const swipes = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull(),
-    discoveryContentId: uuid('discovery_context_id')
+    discoveryContentId: uuid('discovery_content_id')
       .references(() => discoveryContent.id)
       .notNull(),
     direction: swipeDirectionEnum('direction').notNull(),
