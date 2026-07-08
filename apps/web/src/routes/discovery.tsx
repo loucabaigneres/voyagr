@@ -57,7 +57,13 @@ function cleanDesc(desc: string | null): string {
   return (desc ?? '').replace(/\*\*/g, '').replace(/\*/g, '').trim()
 }
 function subcategories(item: DiscoveryItem): string[] {
-  return item.tags?.subcategory ?? []
+  const subcategory = item.tags?.subcategory
+  if (!Array.isArray(subcategory)) return []
+  return subcategory.filter((value): value is string => typeof value === 'string')
+}
+function category(item: DiscoveryItem): string | null {
+  const value = item.tags?.category
+  return typeof value === 'string' ? value : null
 }
 function flag(country: string | null): string {
   return COUNTRY_FLAGS[country ?? ''] ?? '📍'
@@ -149,7 +155,7 @@ function DiscoveryPage() {
     }),
   )
 
-  const shownAtRef = useRef<number>(Date.now())
+  const shownAtRef = useRef<number>(0)
   useEffect(() => {
     shownAtRef.current = Date.now()
   }, [cursor])
@@ -356,9 +362,9 @@ function DiscoveryPage() {
                     />
                     <div className="absolute inset-x-0 bottom-0 h-14 bg-linear-to-t from-[#1b1b27] to-transparent" />
                     {/* Category chip */}
-                    {item.tags?.category && (
+                    {category(item) && (
                       <span className="absolute left-3 top-3 rounded-full bg-black/45 px-3 py-1 text-xs font-semibold capitalize text-white backdrop-blur-sm">
-                        {item.tags.category}
+                        {category(item)}
                       </span>
                     )}
                     {/* Stamps */}
@@ -565,9 +571,9 @@ function DetailSheet({ item, onClose }: { item: DiscoveryItem; onClose: () => vo
             {flag(item.country)} {item.city}, {item.country}
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {item.tags?.category && (
+            {category(item) && (
               <span className="rounded-full border border-[rgba(240,192,64,.2)] bg-[rgba(240,192,64,.1)] px-2.5 py-0.5 text-xs capitalize text-[#f0c040]">
-                {item.tags.category}
+                {category(item)}
               </span>
             )}
             {subcategories(item).map((s) => (
