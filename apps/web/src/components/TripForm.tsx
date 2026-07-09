@@ -15,7 +15,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
   const totalSteps = 3;
 
   const { register, handleSubmit, watch, control, setValue, trigger, formState: { errors } } = useForm<TripFormValues>({
-    resolver: zodResolver(tripFormSchema) as any,
+    resolver: zodResolver(tripFormSchema as never),
     defaultValues: {
       destination: initialDestination,
       numberOfPeople: 1,

@@ -27,7 +27,7 @@
     "react-hook-form": "^7.80.0",
     "superjson": "^2.2.6",
     "tailwindcss": "^4.3.0",
-    "zod": "^4.4.3"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
