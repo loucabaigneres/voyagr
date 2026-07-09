@@ -1,8 +1,8 @@
-import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
-import { tripFormSchema, AVAILABLE_INTERESTS, DIETARY_OPTIONS, MEDICAL_OPTIONS } from '../lib/validations/trip';
+import { useFieldArray, useForm } from 'react-hook-form';
 import type { TripFormValues } from '../lib/validations/trip';
+import { AVAILABLE_INTERESTS, DIETARY_OPTIONS, MEDICAL_OPTIONS, tripFormSchema } from '../lib/validations/trip';
 
 interface TripFormProps {
   initialDestination?: string;

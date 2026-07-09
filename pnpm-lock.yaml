@@ -91,6 +91,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.4.0
+        version: 5.4.0(react-hook-form@7.80.0(react@19.2.7))
       '@react-pdf/renderer':
         specifier: ^4.5.1
         version: 4.5.1(react@19.2.7)
@@ -127,6 +130,9 @@ importers:
       react-dom:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
+      react-hook-form:
+        specifier: ^7.80.0
+        version: 7.80.0(react@19.2.7)
       superjson:
         specifier: ^2.2.6
         version: 2.2.6
@@ -5906,6 +5912,11 @@ snapshots:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.80.0(react@19.2.0)
 
+  '@hookform/resolvers@5.4.0(react-hook-form@7.80.0(react@19.2.7))':
+    dependencies:
+      '@standard-schema/utils': 0.3.0
+      react-hook-form: 7.80.0(react@19.2.7)
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -9330,6 +9341,10 @@ snapshots:
   react-hook-form@7.80.0(react@19.2.0):
     dependencies:
       react: 19.2.0
+
+  react-hook-form@7.80.0(react@19.2.7):
+    dependencies:
+      react: 19.2.7
 
   react-is@16.13.1: {}
 
