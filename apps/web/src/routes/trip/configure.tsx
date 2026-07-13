@@ -50,14 +50,14 @@ function TripConfigurePage() {
 
   if (tripId && existingTripQuery.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <p className="text-gray-500">Chargement…</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8]">
+        <p className="text-[#888]">Chargement…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
+    <div className="min-h-screen bg-[#F2EDE8] px-4 py-8">
       <TripForm
         initialDestination={existingTripQuery.data?.destination ?? 'Paris'}
         onSubmit={handleFormSubmit}

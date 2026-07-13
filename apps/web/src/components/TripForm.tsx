@@ -94,23 +94,23 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8 bg-white rounded-2xl shadow-sm mt-10">
-      
+    <div className="max-w-2xl mx-auto p-6 sm:p-8 bg-white rounded-3xl shadow-sm mt-6">
+
       {/* --- EN-TÊTE ET BARRE DE PROGRESSION --- */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-extrabold text-[#1a1a1a]">
             {step === 1 && "Les bases du voyage"}
             {step === 2 && "L'ambiance"}
             {step === 3 && "Les derniers détails"}
           </h1>
-          <span className="text-sm font-medium text-gray-400">Étape {step} sur {totalSteps}</span>
+          <span className="text-sm font-medium text-[#aaa]">Étape {step} sur {totalSteps}</span>
         </div>
-        
+
         {/* Barre de progression visuelle */}
-        <div className="w-full bg-gray-100 rounded-full h-2">
-          <div 
-            className="bg-black h-2 rounded-full transition-all duration-300" 
+        <div className="w-full bg-[#F2EDE8] rounded-full h-2">
+          <div
+            className="bg-[#FF4D4D] h-2 rounded-full transition-all duration-300"
             style={{ width: `${(step / totalSteps) * 100}%` }}
           ></div>
         </div>
@@ -124,11 +124,11 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Destination</label>
-                <input {...register("destination")} readOnly className="w-full border p-3 rounded-lg bg-gray-50 text-gray-500" />
+                <input {...register("destination")} readOnly className="w-full border border-[#ddd] p-3 rounded-xl bg-[#F2EDE8] text-[#888]" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Date de départ</label>
-                <input type="date" {...register("startDate")} className="w-full border p-3 rounded-lg" />
+                <input type="date" {...register("startDate")} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" />
                 {errors.startDate && <span className="text-red-500 text-xs">{errors.startDate.message}</span>}
               </div>
             </div>
@@ -136,11 +136,11 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Durée (jours)</label>
-                <input type="number" {...register("durationDays", { valueAsNumber: true })} className="w-full border p-3 rounded-lg" />
+                <input type="number" {...register("durationDays", { valueAsNumber: true })} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Nombre de voyageurs</label>
-                <input type="number" min="1" {...register("numberOfPeople", { valueAsNumber: true })} className="w-full border p-3 rounded-lg" />
+                <input type="number" min="1" {...register("numberOfPeople", { valueAsNumber: true })} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" />
               </div>
             </div>
 
@@ -153,7 +153,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     <input 
                       type="number" 
                       {...register(`ages.${index}.value`, { valueAsNumber: true })} 
-                      className="w-full border p-3 pl-8 rounded-lg" 
+                      className="w-full border border-[#ddd] p-3 pl-8 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" 
                     />
                   </div>
                 ))}
@@ -168,7 +168,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-2">Rythme souhaité</label>
-                <select {...register("intensity")} className="w-full border p-3 rounded-lg bg-white">
+                <select {...register("intensity")} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition">
                   <option value="chill">Relax (Prendre son temps)</option>
                   <option value="balanced">Équilibré (Un peu de tout)</option>
                   <option value="intense">Intense (Explorer un max)</option>
@@ -176,7 +176,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Budget moyen / personne</label>
-                <select {...register("averagePrice")} className="w-full border p-3 rounded-lg bg-white">
+                <select {...register("averagePrice")} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition">
                   <option value="budget">Petit budget</option>
                   <option value="mid">Moyen</option>
                   <option value="premium">Premium</option>
@@ -195,7 +195,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                       type="button"
                       onClick={() => toggleInterest(interest.id)}
                       className={`px-5 py-2.5 rounded-full border text-sm transition-all ${
-                        isSelected ? 'bg-black text-white border-black scale-105 shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-50'
+                        isSelected ? 'bg-[#FF4D4D] text-white border-[#FF4D4D] scale-105 shadow-sm' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
                       }`}
                     >
                       {interest.label}
@@ -222,7 +222,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     type="button"
                     onClick={() => toggleArrayItem("dietaryOptions", option.id, currentDietary)}
                     className={`px-4 py-2 rounded-full border text-sm transition-all ${
-                      currentDietary.includes(option.id) ? 'bg-black text-white border-black' : 'bg-white text-gray-700 hover:bg-gray-50'
+                      currentDietary.includes(option.id) ? 'bg-[#FF4D4D] text-white border-[#FF4D4D]' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
                     }`}
                   >
                     {option.label}
@@ -233,7 +233,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                 type="text"
                 {...register("dietaryCustom")} 
                 placeholder="Autre chose à préciser ? (Ex: Allergie aux arachides)" 
-                className="w-full border p-3 rounded-lg"
+                className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
               />
             </div>
 
@@ -247,7 +247,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     type="button"
                     onClick={() => toggleArrayItem("medicalOptions", option.id, currentMedical)}
                     className={`px-4 py-2 rounded-full border text-sm transition-all ${
-                      currentMedical.includes(option.id) ? 'bg-black text-white border-black' : 'bg-white text-gray-700 hover:bg-gray-50'
+                      currentMedical.includes(option.id) ? 'bg-[#FF4D4D] text-white border-[#FF4D4D]' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
                     }`}
                   >
                     {option.label}
@@ -258,7 +258,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                 type="text"
                 {...register("medicalCustom")} 
                 placeholder="Un besoin spécifique ? (Ex: Problèmes de dos)" 
-                className="w-full border p-3 rounded-lg"
+                className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
               />
             </div>
 
@@ -271,7 +271,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             type="button" 
             onClick={handlePrev}
             disabled={step === 1}
-            className={`px-6 py-3 font-medium rounded-lg transition-colors ${step === 1 ? 'invisible' : 'text-gray-500 hover:bg-gray-100'}`}
+            className={`px-6 py-3 font-medium rounded-lg transition-colors ${step === 1 ? 'invisible' : 'text-[#888] hover:bg-[#F2EDE8]'}`}
           >
             Retour
           </button>
@@ -280,7 +280,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <button 
               type="button" 
               onClick={handleNext}
-              className="px-8 py-3 bg-black text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 transition"
             >
               Suivant
             </button>
@@ -288,7 +288,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <button 
               type="submit" 
               disabled={isLoading}
-              className="px-8 py-3 bg-black text-white font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 disabled:opacity-50 transition"
             >
               {isLoading ? "Génération..." : "Terminer ✨"}
             </button>

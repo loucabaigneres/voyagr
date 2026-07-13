@@ -38,19 +38,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
   Allemagne: '🇩🇪',
   Angleterre: '🇬🇧',
   Portugal: '🇵🇹',
-}
-const CITY_EMOJI: Record<string, string> = {
-  Rome: '🏛️',
-  Paris: '🗼',
-  Madrid: '💃',
-  Barcelone: '🎨',
-  Berlin: '🎸',
-  Londres: '🎡',
-  Milan: '👗',
-  Lisbonne: '🎵',
-  Naples: '🍕',
-  Marseille: '⛵',
-  Ajaccio: '🌊',
+  Grèce: '🇬🇷',
 }
 
 function cleanDesc(desc: string | null): string {
@@ -64,9 +52,6 @@ function subcategories(item: DiscoveryItem): string[] {
 function category(item: DiscoveryItem): string | null {
   const value = item.tags?.category
   return typeof value === 'string' ? value : null
-}
-function flag(country: string | null): string {
-  return COUNTRY_FLAGS[country ?? ''] ?? '📍'
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -247,209 +232,170 @@ function DiscoveryPage() {
     saveTrip.reset()
   }
 
-  const progress = Math.min((likes / LIKE_GOAL) * 100, 100)
-  const remaining = Math.max(0, LIKE_GOAL - likes)
   const noMoreCards = !feedQuery.isLoading && cursor >= effectiveFeed.length
+  const progress = Math.min((likes / LIKE_GOAL) * 100, 100)
+  const likeStamp = drag.x > 20 ? Math.min(drag.x / 90, 1) : 0
+  const skipStamp = drag.x < -20 ? Math.min(-drag.x / 90, 1) : 0
 
   return (
-    <div className="relative isolate min-h-[calc(100dvh-4rem)] w-full overflow-x-hidden bg-[#0f0f13] text-[#e8e8f0]">
-      {/* Immersive backdrop */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            'radial-gradient(60rem 40rem at 15% -10%, rgba(108,99,255,.22), transparent 60%), radial-gradient(50rem 40rem at 110% 10%, rgba(167,139,250,.16), transparent 55%), radial-gradient(40rem 30rem at 50% 120%, rgba(46,204,113,.10), transparent 60%)',
-        }}
-      />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-[#1a1a1a] md:bg-[#F2EDE8]">
+      {/* On mobile: full screen. On desktop: centered phone-like frame. */}
+      <div className="relative h-full w-full overflow-hidden md:h-[min(92vh,820px)] md:w-[420px] md:rounded-[2rem] md:bg-[#1a1a1a] md:shadow-2xl">
+      {/* Card stack */}
+      {feedQuery.isLoading && <SkeletonCard />}
 
-      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-130 flex-col px-4">
-        {/* Header */}
-        <header className="flex items-center justify-between pt-6 pb-3">
-          <h1 className="text-xl font-extrabold tracking-tight">
-            ✈ Swipe<span className="text-[#6c63ff]">Travel</span>
-          </h1>
-          <div className="flex gap-3 text-sm text-[#9a9ac0]">
-            <span className="rounded-full bg-white/5 px-2.5 py-1">
-              ❤️ <b className="text-[#e8e8f0]">{likes}</b>/{LIKE_GOAL}
-            </span>
-            <span className="rounded-full bg-white/5 px-2.5 py-1">
-              ✖ <b className="text-[#e8e8f0]">{skips}</b>
-            </span>
-          </div>
-        </header>
-
-        {/* Progress */}
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#23233040]">
-          <div
-            className="h-full rounded-full bg-linear-to-r from-[#6c63ff] to-[#a78bfa] shadow-[0_0_12px_rgba(108,99,255,.6)] transition-[width] duration-500"
-            style={{ width: `${progress}%` }}
-          />
+      {feedQuery.isError && (
+        <div className="flex h-full items-center justify-center">
+          <p className="text-center text-sm text-red-400">Impossible de charger les lieux.</p>
         </div>
-        <p className="mt-2 text-center text-xs text-[#9a9ac0]">
-          {remaining > 0 ? (
-            <>
-              Plus que <b className="text-[#e8e8f0]">{remaining}</b> like{remaining > 1 ? 's' : ''} pour
-              débloquer ta destination
-            </>
-          ) : (
-            <span className="text-[#2ecc71]">✨ Ta destination est prête — appuie sur 🧭</span>
-          )}
-        </p>
+      )}
 
-        {/* Card stack — fixed-height box so cards never overlap the buttons */}
-        <div className="flex flex-1 items-center justify-center py-3">
-          <div className="relative flex h-72.5 w-67.5 items-center justify-center">
-          {feedQuery.isLoading && <SkeletonCard />}
-          {feedQuery.isError && (
-            <p className="max-w-65 text-center text-sm text-[#e74c3c]">
-              Impossible de charger les lieux. Vérifie que le serveur tourne.
-            </p>
-          )}
-          {noMoreCards && (
-            <div className="flex flex-col items-center gap-3 text-[#9a9ac0]">
-              <span className="text-5xl">🗺️</span>
-              <p>Tu as parcouru tous les lieux !</p>
-              <button
-                onClick={triggerResult}
-                className="rounded-xl bg-[#6c63ff] px-5 py-2.5 font-semibold text-white transition hover:brightness-110"
-              >
-                Voir ma destination
-              </button>
-            </div>
-          )}
-
-          {stack
-            .map((item, i) => {
-              const isTop = i === 0
-              const offset = i
-              const rot = isTop ? drag.x * 0.06 : 0
-              let transform = `scale(${1 - offset * 0.04}) translateY(${offset * 10}px)`
-              let transition = 'transform .25s ease'
-              if (isTop && leaving) {
-                const dir = leaving === 'like' ? 1 : -1
-                transform = `translate(${dir * 600}px, -60px) rotate(${dir * 22}deg)`
-                transition = 'transform .35s ease, opacity .35s ease'
-              } else if (isTop && drag.active) {
-                transform = `translate(${drag.x}px, ${drag.y}px) rotate(${rot}deg)`
-                transition = 'none'
-              }
-              const likeStamp = isTop && drag.x > 20 ? Math.min(drag.x / 90, 1) : 0
-              const skipStamp = isTop && drag.x < -20 ? Math.min(-drag.x / 90, 1) : 0
-
-              return (
-                <article
-                  key={item.id}
-                  className="absolute w-67.5 overflow-hidden rounded-2xl border border-white/8 bg-[#1b1b27] shadow-[0_8px_24px_rgba(0,0,0,.4)]"
-                  style={{
-                    transform,
-                    transition,
-                    zIndex: 10 - offset,
-                    opacity: isTop && leaving ? 0 : 1,
-                    cursor: isTop ? 'grab' : 'default',
-                    touchAction: 'none',
-                  }}
-                  onPointerDown={isTop ? onPointerDown : undefined}
-                  onPointerMove={isTop ? onPointerMove : undefined}
-                  onPointerUp={isTop ? onPointerUp : undefined}
-                >
-                  <div className="relative">
-                    <img
-                      src={item.mainMediaUrl}
-                      alt=""
-                      className="h-37.5 w-full object-cover"
-                      draggable={false}
-                    />
-                    <div className="absolute inset-x-0 bottom-0 h-14 bg-linear-to-t from-[#1b1b27] to-transparent" />
-                    {/* Category chip */}
-                    {category(item) && (
-                      <span className="absolute left-3 top-3 rounded-full bg-black/45 px-3 py-1 text-xs font-semibold capitalize text-white backdrop-blur-sm">
-                        {category(item)}
-                      </span>
-                    )}
-                    {/* Stamps */}
-                    <div
-                      className="absolute left-5 top-7 -rotate-12 rounded-lg border-[3px] border-[#2ecc71] px-4 py-1.5 text-2xl font-black tracking-widest text-[#2ecc71]"
-                      style={{ opacity: likeStamp }}
-                    >
-                      LIKE
-                    </div>
-                    <div
-                      className="absolute right-5 top-7 rotate-12 rounded-lg border-[3px] border-[#e74c3c] px-4 py-1.5 text-2xl font-black tracking-widest text-[#e74c3c]"
-                      style={{ opacity: skipStamp }}
-                    >
-                      SKIP
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!moved.current) setDetail(item)
-                    }}
-                    className="block w-full cursor-pointer px-4 pb-3.5 pt-2.5 text-left"
-                  >
-                    <div className="truncate text-base font-bold">{item.locationName}</div>
-                    <div className="mt-0.5 text-[0.8rem] font-medium text-[#a78bfa]">
-                      {flag(item.country)} {item.city}, {item.country}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {subcategories(item)
-                        .slice(0, 3)
-                        .map((s) => (
-                          <span
-                            key={s}
-                            className="rounded-full border border-[rgba(108,99,255,.25)] bg-[rgba(108,99,255,.15)] px-2 py-0.5 text-[0.7rem] text-[#a9a2ff]"
-                          >
-                            {s}
-                          </span>
-                        ))}
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-[0.72rem] leading-relaxed text-[#9a9ac0]">
-                      {cleanDesc(item.description)}
-                    </p>
-                    <span className="mt-2 inline-block text-[0.65rem] text-[#6f6f8f]">
-                      👆 Appuie pour en savoir plus
-                    </span>
-                  </button>
-                </article>
-              )
-            })
-            .reverse()}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <p className="mb-3 text-center text-xs text-[#6f6f8f]">
-          ← passer · → j’aime · espace = recommandation
-        </p>
-        <div className="flex items-end justify-center gap-6 pb-7">
-          <ActionButton
-            label="Passer"
-            onClick={() => commitSwipe(false)}
-            disabled={!topItem}
-            className="h-14 w-14 border-[rgba(231,76,60,.35)] bg-[rgba(231,76,60,.15)] text-xl text-[#e74c3c]"
-          >
-            ✕
-          </ActionButton>
-          <ActionButton
-            label="Reco"
+      {noMoreCards && (
+        <div className="flex h-full flex-col items-center justify-center gap-4 bg-[#F2EDE8] px-8">
+          <span className="text-6xl">🗺️</span>
+          <p className="text-center text-lg font-semibold text-[#1a1a1a]">Tu as parcouru tous les lieux !</p>
+          <button
             onClick={triggerResult}
-            className="h-12 w-12 border-[rgba(108,99,255,.35)] bg-[rgba(108,99,255,.15)] text-lg text-[#a9a2ff]"
+            className="rounded-full bg-[#FF4D4D] px-8 py-3.5 font-semibold text-white shadow-lg transition active:scale-95"
           >
-            🧭
-          </ActionButton>
-          <ActionButton
-            label="J’aime"
-            onClick={() => commitSwipe(true)}
-            disabled={!topItem}
-            className="h-16 w-16 border-[rgba(46,204,113,.35)] bg-[rgba(46,204,113,.15)] text-2xl text-[#2ecc71]"
-          >
-            ♥
-          </ActionButton>
+            Voir ma destination
+          </button>
         </div>
+      )}
+
+      {stack
+        .map((item, i) => {
+          const isTop = i === 0
+          const offset = i
+          const rot = isTop ? drag.x * 0.04 : 0
+          let transform = `scale(${1 - offset * 0.04}) translateY(${offset * 12}px)`
+          let transition = 'transform .25s ease'
+          if (isTop && leaving) {
+            const dir = leaving === 'like' ? 1 : -1
+            transform = `translate(${dir * 700}px, -40px) rotate(${dir * 18}deg)`
+            transition = 'transform .32s ease, opacity .32s ease'
+          } else if (isTop && drag.active) {
+            transform = `translate(${drag.x}px, ${drag.y}px) rotate(${rot}deg)`
+            transition = 'none'
+          }
+
+          return (
+            <div
+              key={item.id}
+              className="absolute inset-0"
+              style={{ transform, transition, zIndex: 10 - offset, opacity: isTop && leaving ? 0 : 1 }}
+              onPointerDown={isTop ? onPointerDown : undefined}
+              onPointerMove={isTop ? onPointerMove : undefined}
+              onPointerUp={isTop ? onPointerUp : undefined}
+            >
+              {/* Background image */}
+              <img
+                src={item.mainMediaUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                draggable={false}
+              />
+
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+              {/* LIKE / SKIP stamps */}
+              <div
+                className="absolute left-6 top-20 rotate-[-12deg] rounded-xl border-[3px] border-[#2ecc71] px-5 py-2 text-3xl font-black tracking-widest text-[#2ecc71]"
+                style={{ opacity: likeStamp * (isTop ? 1 : 0) }}
+              >
+                LIKE
+              </div>
+              <div
+                className="absolute right-6 top-20 rotate-[12deg] rounded-xl border-[3px] border-[#FF4D4D] px-5 py-2 text-3xl font-black tracking-widest text-[#FF4D4D]"
+                style={{ opacity: skipStamp * (isTop ? 1 : 0) }}
+              >
+                SKIP
+              </div>
+
+              {/* Bottom info */}
+              <div className="absolute bottom-0 left-0 right-0 px-6 pb-32">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-white/80">
+                  <svg className="h-4 w-4 text-[#FF4D4D]" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  {item.city}, {item.country}
+                </div>
+                <h2 className="mt-1 text-2xl font-bold leading-tight text-white">
+                  {item.locationName}
+                </h2>
+                <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-white/70">
+                  {cleanDesc(item.description)}
+                </p>
+              </div>
+            </div>
+          )
+        })
+        .reverse()}
+
+      {/* Progress bar */}
+      {!noMoreCards && (
+        <div className="absolute left-4 right-4 top-14 z-20">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-white/20">
+            <div
+              className="h-full rounded-full bg-white transition-[width] duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Bottom action buttons */}
+      {!noMoreCards && topItem && (
+        <div className="absolute bottom-10 left-0 right-0 z-20 flex items-center justify-center gap-6">
+          {/* Skip */}
+          <button
+            onClick={() => commitSwipe(false)}
+            disabled={!!leaving}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition active:scale-90 disabled:opacity-50"
+          >
+            <svg className="h-7 w-7 text-[#888]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Detail */}
+          <button
+            onClick={() => { if (!moved.current) setDetail(topItem) }}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition active:scale-90"
+          >
+            <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+
+          {/* Like */}
+          <button
+            onClick={() => commitSwipe(true)}
+            disabled={!!leaving}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FF4D4D] shadow-xl shadow-red-500/30 transition active:scale-90 disabled:opacity-50"
+          >
+            <svg className="h-7 w-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Result trigger button */}
+      {likes > 0 && !showResult && !noMoreCards && (
+        <button
+          onClick={triggerResult}
+          className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full bg-white/90 px-3.5 py-2 text-xs font-bold text-[#1a1a1a] shadow-lg transition active:scale-95"
+        >
+          🧭 <span>{likes}/{LIKE_GOAL}</span>
+        </button>
+      )}
       </div>
 
-      {detail && <DetailSheet item={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <DetailSheet item={detail} onClose={() => setDetail(null)} onLike={() => { setDetail(null); commitSwipe(true) }} onSkip={() => { setDetail(null); commitSwipe(false) }} />
+      )}
       {showResult && (
         <ResultOverlay
           query={recommendationQuery}
@@ -471,53 +417,19 @@ function DiscoveryPage() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Small building blocks
-// ════════════════════════════════════════════════════════════════════════════
-
-function ActionButton({
-  label,
-  children,
-  className = '',
-  disabled,
-  onClick,
-}: {
-  label: string
-  children: React.ReactNode
-  className?: string
-  disabled?: boolean
-  onClick: () => void
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        className={`flex items-center justify-center rounded-full border-2 shadow-lg transition active:scale-90 hover:scale-110 disabled:cursor-not-allowed disabled:opacity-30 ${className}`}
-      >
-        {children}
-      </button>
-      <span className="text-[0.65rem] font-medium text-[#6f6f8f]">{label}</span>
-    </div>
-  )
-}
 
 function SkeletonCard() {
   return (
-    <div className="w-67.5 animate-pulse overflow-hidden rounded-2xl border border-white/8 bg-[#1b1b27]">
-      <div className="h-37.5 w-full bg-white/5" />
-      <div className="space-y-2.5 px-4 py-3.5">
-        <div className="h-4 w-2/3 rounded bg-white/10" />
-        <div className="h-3 w-1/2 rounded bg-white/5" />
-        <div className="flex gap-2">
-          <div className="h-5 w-16 rounded-full bg-white/5" />
-          <div className="h-5 w-12 rounded-full bg-white/5" />
-        </div>
+    <div className="absolute inset-0 animate-pulse bg-[#2a2a2a]">
+      <div className="absolute bottom-32 left-6 right-20 space-y-3">
+        <div className="h-3 w-24 rounded-full bg-white/10" />
+        <div className="h-7 w-56 rounded-lg bg-white/10" />
+        <div className="h-4 w-full rounded-lg bg-white/10" />
       </div>
     </div>
   )
 }
 
-/** Slide-up entrance for bottom sheets. */
 function useEntrance() {
   const [shown, setShown] = useState(false)
   useEffect(() => {
@@ -531,74 +443,137 @@ function useEntrance() {
 // Detail sheet
 // ════════════════════════════════════════════════════════════════════════════
 
-function DetailSheet({ item, onClose }: { item: DiscoveryItem; onClose: () => void }) {
+function DetailSheet({
+  item,
+  onClose,
+  onLike,
+  onSkip,
+}: {
+  item: DiscoveryItem
+  onClose: () => void
+  onLike: () => void
+  onSkip: () => void
+}) {
   const imgs = [item.mainMediaUrl, ...(item.carousselUrls ?? [])].filter(Boolean)
   const [active, setActive] = useState(0)
   const shown = useEntrance()
+  const cats = subcategories(item)
+  const cat = category(item)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-120 overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1a24] transition-transform duration-300 scrollbar-none"
+        className="max-h-[92vh] w-full max-w-[480px] overflow-y-auto rounded-t-3xl bg-[#F2EDE8] transition-transform duration-300 [scrollbar-width:none]"
         style={{ transform: shown ? 'translateY(0)' : 'translateY(100%)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mt-3 h-1 w-10 rounded bg-white/20" />
-        <div className="px-5 pt-4">
-          <img src={imgs[active]} alt="" className="h-55 w-full rounded-2xl object-cover" />
+        {/* Hero image */}
+        <div className="relative h-[260px] w-full overflow-hidden rounded-t-3xl">
+          <img src={imgs[active]} alt="" className="h-full w-full object-cover" draggable={false} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition active:scale-90"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           {imgs.length > 1 && (
-            <div className="mt-2.5 flex gap-2 overflow-x-auto scrollbar-none">
-              {imgs.map((src, i) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt=""
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+              {imgs.map((_, i) => (
+                <button
+                  key={i}
                   onClick={() => setActive(i)}
-                  className={`h-12 w-16 shrink-0 cursor-pointer rounded-lg object-cover transition ${
-                    i === active ? 'opacity-100 outline outline-[#6c63ff]' : 'opacity-50'
-                  }`}
+                  className={`h-1.5 rounded-full transition-all ${i === active ? 'w-5 bg-white' : 'w-1.5 bg-white/50'}`}
                 />
               ))}
             </div>
           )}
         </div>
-        <div className="px-5 pb-8 pt-4">
-          <h2 className="text-xl font-extrabold">{item.locationName}</h2>
-          <div className="mt-1 text-sm font-medium text-[#a78bfa]">
-            {flag(item.country)} {item.city}, {item.country}
+
+        {/* Content */}
+        <div className="px-5 pb-10 pt-5">
+          {/* Location */}
+          <div className="flex items-center gap-1.5 text-sm text-[#FF4D4D] font-medium">
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            </svg>
+            {item.city}, {item.country}
           </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {category(item) && (
-              <span className="rounded-full border border-[rgba(240,192,64,.2)] bg-[rgba(240,192,64,.1)] px-2.5 py-0.5 text-xs capitalize text-[#f0c040]">
-                {category(item)}
-              </span>
-            )}
-            {subcategories(item).map((s) => (
-              <span
-                key={s}
-                className="rounded-full border border-[rgba(108,99,255,.25)] bg-[rgba(108,99,255,.15)] px-2.5 py-0.5 text-xs text-[#a9a2ff]"
-              >
-                {s}
-              </span>
-            ))}
+          <h2 className="mt-1 text-2xl font-bold text-[#1a1a1a]">{item.locationName}</h2>
+
+          <p className="mt-3 text-sm leading-relaxed text-[#666]">{cleanDesc(item.description)}</p>
+
+          {/* Type de lieu */}
+          {(cat || cats.length > 0) && (
+            <div className="mt-5">
+              <h3 className="mb-2.5 text-base font-bold text-[#1a1a1a]">Type de lieu</h3>
+              <div className="flex flex-wrap gap-2">
+                {cat && <Tag label={cat} />}
+                {cats.slice(0, 4).map((s) => <Tag key={s} label={s} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Description détaillée */}
+          <div className="mt-5">
+            <h3 className="mb-2 text-base font-bold text-[#1a1a1a]">Description détaillée</h3>
+            <p className="text-sm leading-relaxed text-[#555]">{cleanDesc(item.description)}</p>
           </div>
-          <p className="mt-3.5 whitespace-pre-wrap text-sm leading-relaxed text-[#c4c4dc]">
-            {cleanDesc(item.description)}
-          </p>
+
+          {/* Activités */}
+          {cats.length > 0 && (
+            <div className="mt-5">
+              <h3 className="mb-2.5 text-base font-bold text-[#1a1a1a]">Activités à faire</h3>
+              <div className="flex flex-wrap gap-2">
+                {cats.map((s) => <Tag key={s} label={s} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="mt-8 flex gap-3">
+            <button
+              onClick={onSkip}
+              className="flex h-14 flex-1 items-center justify-center rounded-2xl border-2 border-[#ddd] bg-white text-[#888] font-semibold transition active:scale-95"
+            >
+              Passer
+            </button>
+            <button
+              onClick={onLike}
+              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#FF4D4D] font-semibold text-white shadow-lg shadow-red-500/25 transition active:scale-95"
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              J'adore
+            </button>
+          </div>
+
           <a
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-5 block rounded-xl border border-[rgba(108,99,255,.3)] bg-[rgba(108,99,255,.15)] px-5 py-2.5 text-center text-sm font-semibold text-[#a9a2ff] transition hover:bg-[rgba(108,99,255,.25)]"
+            className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-[#ddd] bg-white text-sm font-medium text-[#555] transition active:scale-95"
           >
-            Voir sur Booking.com ↗
+            Voir plus d'informations ↗
           </a>
         </div>
       </div>
     </div>
+  )
+}
+
+function Tag({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 rounded-full bg-[#FF4D4D] px-3.5 py-1.5 text-xs font-semibold capitalize text-white">
+      {label}
+    </span>
   )
 }
 
@@ -629,22 +604,24 @@ function ResultOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-100 flex items-end justify-center bg-black/88 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="max-h-[94vh] w-full max-w-130 overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1a24] text-[#e8e8f0] transition-transform duration-300 scrollbar-none"
+        className="max-h-[94vh] w-full max-w-[520px] overflow-y-auto rounded-t-3xl bg-[#F2EDE8] transition-transform duration-300 [scrollbar-width:none]"
         style={{ transform: shown ? 'translateY(0)' : 'translateY(100%)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mt-3.5 h-1 w-10 rounded bg-white/20" />
+        <div className="mx-auto mt-3.5 h-1 w-10 rounded-full bg-[#ddd]" />
 
         {query.isLoading && (
-          <p className="p-10 text-center text-[#9a9ac0]">Calcul de ta destination…</p>
+          <p className="p-10 text-center text-[#888]">Calcul de ta destination…</p>
         )}
-        {query.isError && <p className="p-10 text-center text-[#e74c3c]">Erreur lors du calcul.</p>}
+        {query.isError && (
+          <p className="p-10 text-center text-[#FF4D4D]">Erreur lors du calcul.</p>
+        )}
         {!query.isLoading && result && result.status !== 'ok' && (
-          <p className="p-10 text-center text-[#9a9ac0]">
+          <p className="p-10 text-center text-[#888]">
             Pas encore assez de données — continue à swiper !
           </p>
         )}
@@ -652,163 +629,141 @@ function ResultOverlay({
         {result && top && (
           <>
             {/* Hero */}
-            <div className="relative h-52.5 overflow-hidden rounded-t-3xl">
+            <div className="relative h-[220px] overflow-hidden rounded-t-3xl">
               {top.heroImage && (
                 <img src={top.heroImage} alt="" className="h-full w-full object-cover" />
               )}
-              <div className="absolute inset-0 bg-linear-to-t from-[#1a1a24] via-[#1a1a24]/30 to-transparent" />
-              <div className="absolute bottom-4 left-5 right-5">
-                <div className="text-xs uppercase tracking-wider text-white/60">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-5 left-5 right-5">
+                <div className="text-xs font-medium uppercase tracking-wider text-white/70">
                   Ta prochaine destination ✈️
                 </div>
-                <div className="text-4xl font-black leading-none text-white">
-                  {CITY_EMOJI[top.city] ?? ''} {top.city}
-                </div>
-                <div className="mt-0.5 text-sm text-[#a78bfa]">
+                <div className="mt-1 text-4xl font-black text-white">{top.city}</div>
+                <div className="mt-0.5 text-sm text-white/80">
                   {COUNTRY_FLAGS[top.country] ?? ''} {top.country}
                 </div>
               </div>
             </div>
 
-            <div className="px-5 pb-9">
+            <div className="px-5 pb-10">
               {/* Score */}
-              <Section title="Score de compatibilité">
-                <div className="flex items-center gap-4">
-                  <ScoreRing pct={Math.round(result.confidence * 100)} />
-                  <div className="flex flex-1 flex-col gap-1 text-sm text-[#9a9ac0]">
-                    <div>
-                      <b className="text-[#e8e8f0]">{result.likes}</b> likes ·{' '}
-                      <b className="text-[#e8e8f0]">{result.skips}</b> skips
-                    </div>
-                    <div>
-                      Score brut : <b className="text-[#e8e8f0]">{top.score.toFixed(1)}</b> pts
-                    </div>
-                    <div>{result.totalSwipes} swipes au total</div>
-                  </div>
+              <div className="mt-5 flex items-center gap-4 rounded-2xl bg-white p-4">
+                <ScoreRing pct={Math.round(result.confidence * 100)} />
+                <div className="flex-1 text-sm text-[#666]">
+                  <div><b className="text-[#1a1a1a]">{result.likes}</b> likes · <b className="text-[#1a1a1a]">{result.skips}</b> skips</div>
+                  <div className="mt-0.5">Score : <b className="text-[#1a1a1a]">{top.score.toFixed(1)}</b> pts</div>
+                  <div>{result.totalSwipes} swipes au total</div>
                 </div>
-              </Section>
+              </div>
 
-              {/* Breakdown */}
-              <Section title="Pourquoi cette ville ?">
-                <Breakdown breakdown={top.breakdown} />
-              </Section>
-
-              {/* Podium */}
-              <Section title="Classement complet">
-                <div className="flex flex-col gap-2">
-                  {result.destinations.map((d: Destination, i: number) => {
-                    const pct = top.score > 0 ? Math.round((d.score / top.score) * 100) : 0
-                    return (
-                      <div
-                        key={d.city}
-                        className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${
-                          i === 0
-                            ? 'border-[rgba(108,99,255,.4)] bg-[rgba(108,99,255,.08)]'
-                            : 'border-white/10 bg-white/4'
-                        }`}
-                      >
-                        <div className="text-xl">{['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`}</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-bold">
-                            {COUNTRY_FLAGS[d.country] ?? ''} {d.city}
-                          </div>
-                          <div className="text-xs text-[#9a9ac0]">
-                            {d.country} · {d.itemCount} lieux · score {d.score.toFixed(1)}
-                          </div>
-                        </div>
-                        <div className="h-1.5 w-16 overflow-hidden rounded bg-[#2a2a3e]">
-                          <div
-                            className="h-full rounded bg-linear-to-r from-[#6c63ff] to-[#a78bfa]"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
+              {/* Classement */}
+              <h3 className="mb-3 mt-6 text-base font-bold text-[#1a1a1a]">Classement complet</h3>
+              <div className="flex flex-col gap-2">
+                {result.destinations.map((d: Destination, i: number) => (
+                  <div
+                    key={d.city}
+                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${
+                      i === 0 ? 'bg-[#FF4D4D] text-white' : 'bg-white text-[#1a1a1a]'
+                    }`}
+                  >
+                    <span className="text-lg">{['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold truncate">{d.city}</div>
+                      <div className={`text-xs ${i === 0 ? 'text-white/70' : 'text-[#888]'}`}>
+                        {d.country} · {d.score.toFixed(1)} pts
                       </div>
-                    )
-                  })}
-                </div>
-              </Section>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-              {/* Liked places */}
+              {/* Lieux likés */}
               {top.likedHere.length > 0 && (
-                <Section title="Lieux que tu as likés ici">
-                  <div className="flex gap-2 overflow-x-auto scrollbar-none">
+                <>
+                  <h3 className="mb-3 mt-6 text-base font-bold text-[#1a1a1a]">Lieux que tu as likés</h3>
+                  <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
                     {top.likedHere.map((p: LikedPlace) => (
                       <a
                         key={p.id}
                         href={p.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-30 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-[#1e1e2e] transition hover:scale-[1.03]"
+                        className="w-[120px] flex-shrink-0 overflow-hidden rounded-xl bg-white shadow-sm transition active:scale-95"
                       >
-                        <img src={p.mainMediaUrl} alt="" className="h-19 w-full object-cover" />
-                        <div className="truncate px-2 py-1.5 text-[0.68rem]">{p.locationName}</div>
+                        <img src={p.mainMediaUrl} alt="" className="h-[76px] w-full object-cover" />
+                        <div className="truncate px-2 py-1.5 text-[0.68rem] font-medium text-[#1a1a1a]">{p.locationName}</div>
                       </a>
                     ))}
                   </div>
-                </Section>
+                </>
               )}
 
               {/* Ambiances */}
               {top.topSubcategories.length > 0 && (
-                <Section title="Ambiances disponibles">
-                  <div className="flex flex-wrap gap-1.5">
-                    {top.topSubcategories.map((s: Subcategory) => (
+                <>
+                  <h3 className="mb-3 mt-6 text-base font-bold text-[#1a1a1a]">Ambiances disponibles</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {top.topSubcategories.slice(0, 8).map((s: Subcategory) => (
                       <span
                         key={s.name}
-                        className="flex items-center gap-1.5 rounded-full border border-[rgba(108,99,255,.2)] bg-[rgba(108,99,255,.12)] px-3 py-1 text-xs text-[#a9a2ff]"
+                        className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1a1a1a]"
                       >
-                        {s.name}
-                        <span className="rounded-[10px] bg-[rgba(108,99,255,.25)] px-1.5 text-[0.65rem] font-bold">
-                          {s.count}
-                        </span>
+                        {s.name} <span className="text-[#FF4D4D]">·{s.count}</span>
                       </span>
                     ))}
                   </div>
-                </Section>
+                </>
               )}
 
               {/* Stats */}
-              <Section title="Tes stats de swipe">
-                <div className="grid grid-cols-2 gap-2">
-                  <Stat
-                    value={`${Math.round((likes / (likes + skips || 1)) * 100)}%`}
-                    label="Taux de like"
-                  />
-                  <Stat value={String(result.likes)} label="Likes enregistrés" />
-                  <Stat value={String(result.destinations.length)} label="Destinations classées" />
-                  <Stat value={String(result.vetoedCities.length)} label="Villes exclues" />
-                </div>
-              </Section>
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <StatCard value={`${Math.round((likes / (likes + skips || 1)) * 100)}%`} label="Taux de like" />
+                <StatCard value={String(result.destinations.length)} label="Destinations classées" />
+              </div>
 
-              {/* Veto */}
+              {/* Villes exclues */}
               {result.vetoedCities.length > 0 && (
-                <Section title="Villes exclues (trop de skips)">
+                <>
+                  <h3 className="mb-2 mt-5 text-sm font-bold text-[#888]">Villes exclues</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {result.vetoedCities.map((c: string) => (
-                      <span
-                        key={c}
-                        className="rounded-full border border-[rgba(231,76,60,.25)] bg-[rgba(231,76,60,.1)] px-2.5 py-0.5 text-xs text-[#e74c3c]"
-                      >
+                      <span key={c} className="rounded-full bg-[#fee] px-3 py-1 text-xs text-[#FF4D4D]">
                         🚫 {c}
                       </span>
                     ))}
                   </div>
-                </Section>
+                </>
               )}
 
-              {/* Save trip */}
-              <SaveTripButton onSave={onSave} saveState={saveState} />
+              {/* Save */}
+              <div className="mt-8">
+                {saveState.isPending ? (
+                  <button disabled className="w-full rounded-2xl bg-[#FF4D4D] py-4 text-sm font-bold text-white opacity-70">
+                    Création du voyage…
+                  </button>
+                ) : (
+                  <button
+                    onClick={onSave}
+                    className="w-full rounded-2xl bg-[#FF4D4D] py-4 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition active:scale-95"
+                  >
+                    🗺️ Créer mon voyage
+                  </button>
+                )}
+                {saveState.isError && (
+                  <p className="mt-2 text-center text-xs text-[#FF4D4D]">Échec — la base de données est-elle démarrée ?</p>
+                )}
+              </div>
 
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={onClose}
-                  className="flex-1 rounded-xl bg-[#6c63ff] px-8 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+                  className="flex-1 rounded-2xl border border-[#ddd] bg-white py-3.5 text-sm font-semibold text-[#1a1a1a] transition active:scale-95"
                 >
                   Continuer à swiper
                 </button>
                 <button
                   onClick={onRestart}
-                  className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-[#9a9ac0] transition hover:bg-white/5"
+                  className="rounded-2xl border border-[#ddd] bg-white px-5 py-3.5 text-sm font-semibold text-[#888] transition active:scale-95"
                 >
                   Recommencer
                 </button>
@@ -821,53 +776,11 @@ function ResultOverlay({
   )
 }
 
-function SaveTripButton({ onSave, saveState }: { onSave: () => void; saveState: SaveState }) {
-  if (saveState.isPending) {
-    return (
-      <div className="mt-6">
-        <button
-          disabled
-          className="w-full rounded-xl bg-linear-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white opacity-70"
-        >
-          Création du voyage…
-        </button>
-      </div>
-    )
-  }
-
+function StatCard({ value, label }: { value: string; label: string }) {
   return (
-    <div className="mt-6">
-      <button
-        onClick={onSave}
-        className="w-full rounded-xl bg-linear-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white shadow-lg transition hover:brightness-110"
-      >
-        🗺️ Créer mon voyage
-      </button>
-      {saveState.isError && (
-        <p className="mt-2 text-center text-xs text-[#e74c3c]">
-          Échec — la base de données est-elle démarrée et seedée ?
-        </p>
-      )}
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-5">
-      <div className="mb-2.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#9a9ac0]">
-        {title}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/4 px-3.5 py-3">
-      <div className="text-2xl font-extrabold">{value}</div>
-      <div className="mt-0.5 text-xs text-[#9a9ac0]">{label}</div>
+    <div className="rounded-2xl bg-white p-4">
+      <div className="text-2xl font-extrabold text-[#1a1a1a]">{value}</div>
+      <div className="mt-0.5 text-xs text-[#888]">{label}</div>
     </div>
   )
 }
@@ -876,69 +789,20 @@ function ScoreRing({ pct }: { pct: number }) {
   const C = 2 * Math.PI * 30
   const offset = C - (pct / 100) * C
   return (
-    <div className="relative h-18 w-18 shrink-0">
+    <div className="relative h-[72px] w-[72px] flex-shrink-0">
       <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
-        <defs>
-          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#6c63ff" />
-            <stop offset="100%" stopColor="#a78bfa" />
-          </linearGradient>
-        </defs>
-        <circle cx="36" cy="36" r="30" fill="none" stroke="#2a2a3e" strokeWidth="6" />
+        <circle cx="36" cy="36" r="30" fill="none" stroke="#eee" strokeWidth="6" />
         <circle
-          cx="36"
-          cy="36"
-          r="30"
-          fill="none"
-          stroke="url(#ringGrad)"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={C}
-          strokeDashoffset={offset}
+          cx="36" cy="36" r="30" fill="none"
+          stroke="#FF4D4D" strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={offset}
           style={{ transition: 'stroke-dashoffset 1s ease' }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-extrabold">{pct}%</span>
-        <span className="text-[0.55rem] text-[#9a9ac0]">confiance</span>
+        <span className="text-sm font-extrabold text-[#1a1a1a]">{pct}%</span>
+        <span className="text-[0.55rem] text-[#888]">match</span>
       </div>
-    </div>
-  )
-}
-
-function Breakdown({ breakdown }: { breakdown: Destination['breakdown'] }) {
-  const labels: Record<string, string> = {
-    country: '🌍 Pays',
-    city: '📍 Ville',
-    category: '🏷 Catégorie',
-    subcategory: '✨ Ambiances',
-  }
-  const max = Math.max(...Object.keys(labels).map((k) => Math.abs(breakdown[k] ?? 0)), 0.1)
-  return (
-    <div className="flex flex-col gap-2">
-      {Object.entries(labels).map(([key, label]) => {
-        const val = breakdown[key] ?? 0
-        const pct = Math.round((Math.abs(val) / max) * 100)
-        return (
-          <div key={key} className="flex items-center gap-2.5 text-xs">
-            <div className="w-22.5 shrink-0 text-[#9a9ac0]">{label}</div>
-            <div className="h-1.5 flex-1 overflow-hidden rounded bg-[#2a2a3e]">
-              <div
-                className={`h-full rounded ${
-                  val >= 0
-                    ? 'bg-linear-to-r from-[#6c63ff] to-[#a78bfa]'
-                    : 'bg-linear-to-r from-[#e74c3c] to-[#ff8a80]'
-                }`}
-                style={{ width: `${pct}%`, transition: 'width .8s ease' }}
-              />
-            </div>
-            <div className="w-9 shrink-0 text-right text-[0.72rem] text-[#9a9ac0]">
-              {val >= 0 ? '+' : ''}
-              {val.toFixed(1)}
-            </div>
-          </div>
-        )
-      })}
     </div>
   )
 }
