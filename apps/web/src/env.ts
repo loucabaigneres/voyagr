@@ -12,7 +12,7 @@ if (!parsedEnv.success) {
   console.error('❌ Error parsing environment variables:');
   // Show detailed error messages for each invalid variable
   console.error(JSON.stringify(z.treeifyError(parsedEnv.error), null, 2));
-  process.exit(1); // Exit with error code if validation fails
+  throw new Error('Invalid environment variables.');
 }
 
 // Export the validated environment variables

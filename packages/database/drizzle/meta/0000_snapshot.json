@@ -1,5 +1,5 @@
 {
-  "id": "6322e0c7-af76-41be-a61a-0c50cbcada47",
+  "id": "8a633d4e-2db9-4c34-954a-e764519e05a0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -156,6 +156,12 @@
           "type": "timestamp (6) with time zone",
           "primaryKey": false,
           "notNull": true
+        },
+        "impersonated_by": {
+          "name": "impersonated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
