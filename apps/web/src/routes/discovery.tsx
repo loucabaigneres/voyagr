@@ -1,15 +1,12 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
-import { useTRPC } from '#/integrations/trpc/react'
-import type { AppRouter } from '../../../api/src/trpc/router'
-import type { inferRouterOutputs } from '@trpc/server'
+import type { RouterOutputs } from '../lib/trpc'
+import { trpc } from '../lib/trpc'
 
 export const Route = createFileRoute('/discovery')({ component: DiscoveryPage })
 
 // ─── Types derived from the tRPC router (single source of truth) ───────────────
-type RouterOutputs = inferRouterOutputs<AppRouter>
 type RecommendationOutput = RouterOutputs['discovery']['recommendation']
 type SaveTripOutput = RouterOutputs['discovery']['saveTrip']
 type DiscoveryItem = RouterOutputs['discovery']['feed'][number]
@@ -60,7 +57,13 @@ function cleanDesc(desc: string | null): string {
   return (desc ?? '').replace(/\*\*/g, '').replace(/\*/g, '').trim()
 }
 function subcategories(item: DiscoveryItem): string[] {
-  return item.tags?.subcategory ?? []
+  const subcategory = item.tags?.subcategory
+  if (!Array.isArray(subcategory)) return []
+  return subcategory.filter((value): value is string => typeof value === 'string')
+}
+function category(item: DiscoveryItem): string | null {
+  const value = item.tags?.category
+  return typeof value === 'string' ? value : null
 }
 function flag(country: string | null): string {
   return COUNTRY_FLAGS[country ?? ''] ?? '📍'
@@ -69,7 +72,6 @@ function flag(country: string | null): string {
 // ════════════════════════════════════════════════════════════════════════════
 
 function DiscoveryPage() {
-  const trpc = useTRPC()
   const navigate = useNavigate()
 
   const feedQuery = useQuery(trpc.discovery.feed.queryOptions())
@@ -153,7 +155,7 @@ function DiscoveryPage() {
     }),
   )
 
-  const shownAtRef = useRef<number>(Date.now())
+  const shownAtRef = useRef<number>(0)
   useEffect(() => {
     shownAtRef.current = Date.now()
   }, [cursor])
@@ -261,7 +263,7 @@ function DiscoveryPage() {
         }}
       />
 
-      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-[520px] flex-col px-4">
+      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-130 flex-col px-4">
         {/* Header */}
         <header className="flex items-center justify-between pt-6 pb-3">
           <h1 className="text-xl font-extrabold tracking-tight">
@@ -280,7 +282,7 @@ function DiscoveryPage() {
         {/* Progress */}
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#23233040]">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#6c63ff] to-[#a78bfa] shadow-[0_0_12px_rgba(108,99,255,.6)] transition-[width] duration-500"
+            className="h-full rounded-full bg-linear-to-r from-[#6c63ff] to-[#a78bfa] shadow-[0_0_12px_rgba(108,99,255,.6)] transition-[width] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -297,10 +299,10 @@ function DiscoveryPage() {
 
         {/* Card stack — fixed-height box so cards never overlap the buttons */}
         <div className="flex flex-1 items-center justify-center py-3">
-          <div className="relative flex h-[290px] w-[270px] items-center justify-center">
+          <div className="relative flex h-72.5 w-67.5 items-center justify-center">
           {feedQuery.isLoading && <SkeletonCard />}
           {feedQuery.isError && (
-            <p className="max-w-[260px] text-center text-sm text-[#e74c3c]">
+            <p className="max-w-65 text-center text-sm text-[#e74c3c]">
               Impossible de charger les lieux. Vérifie que le serveur tourne.
             </p>
           )}
@@ -338,7 +340,7 @@ function DiscoveryPage() {
               return (
                 <article
                   key={item.id}
-                  className="absolute w-[270px] overflow-hidden rounded-2xl border border-white/[.08] bg-[#1b1b27] shadow-[0_8px_24px_rgba(0,0,0,.4)]"
+                  className="absolute w-67.5 overflow-hidden rounded-2xl border border-white/8 bg-[#1b1b27] shadow-[0_8px_24px_rgba(0,0,0,.4)]"
                   style={{
                     transform,
                     transition,
@@ -355,25 +357,25 @@ function DiscoveryPage() {
                     <img
                       src={item.mainMediaUrl}
                       alt=""
-                      className="h-[150px] w-full object-cover"
+                      className="h-37.5 w-full object-cover"
                       draggable={false}
                     />
-                    <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#1b1b27] to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 h-14 bg-linear-to-t from-[#1b1b27] to-transparent" />
                     {/* Category chip */}
-                    {item.tags?.category && (
+                    {category(item) && (
                       <span className="absolute left-3 top-3 rounded-full bg-black/45 px-3 py-1 text-xs font-semibold capitalize text-white backdrop-blur-sm">
-                        {item.tags.category}
+                        {category(item)}
                       </span>
                     )}
                     {/* Stamps */}
                     <div
-                      className="absolute left-5 top-7 rotate-[-12deg] rounded-lg border-[3px] border-[#2ecc71] px-4 py-1.5 text-2xl font-black tracking-widest text-[#2ecc71]"
+                      className="absolute left-5 top-7 -rotate-12 rounded-lg border-[3px] border-[#2ecc71] px-4 py-1.5 text-2xl font-black tracking-widest text-[#2ecc71]"
                       style={{ opacity: likeStamp }}
                     >
                       LIKE
                     </div>
                     <div
-                      className="absolute right-5 top-7 rotate-[12deg] rounded-lg border-[3px] border-[#e74c3c] px-4 py-1.5 text-2xl font-black tracking-widest text-[#e74c3c]"
+                      className="absolute right-5 top-7 rotate-12 rounded-lg border-[3px] border-[#e74c3c] px-4 py-1.5 text-2xl font-black tracking-widest text-[#e74c3c]"
                       style={{ opacity: skipStamp }}
                     >
                       SKIP
@@ -501,8 +503,8 @@ function ActionButton({
 
 function SkeletonCard() {
   return (
-    <div className="w-[270px] animate-pulse overflow-hidden rounded-2xl border border-white/[.08] bg-[#1b1b27]">
-      <div className="h-[150px] w-full bg-white/5" />
+    <div className="w-67.5 animate-pulse overflow-hidden rounded-2xl border border-white/8 bg-[#1b1b27]">
+      <div className="h-37.5 w-full bg-white/5" />
       <div className="space-y-2.5 px-4 py-3.5">
         <div className="h-4 w-2/3 rounded bg-white/10" />
         <div className="h-3 w-1/2 rounded bg-white/5" />
@@ -540,23 +542,23 @@ function DetailSheet({ item, onClose }: { item: DiscoveryItem; onClose: () => vo
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-[480px] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1a24] transition-transform duration-300 [scrollbar-width:none]"
+        className="max-h-[88vh] w-full max-w-120 overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1a24] transition-transform duration-300 scrollbar-none"
         style={{ transform: shown ? 'translateY(0)' : 'translateY(100%)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mt-3 h-1 w-10 rounded bg-white/20" />
         <div className="px-5 pt-4">
-          <img src={imgs[active]} alt="" className="h-[220px] w-full rounded-2xl object-cover" />
+          <img src={imgs[active]} alt="" className="h-55 w-full rounded-2xl object-cover" />
           {imgs.length > 1 && (
-            <div className="mt-2.5 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+            <div className="mt-2.5 flex gap-2 overflow-x-auto scrollbar-none">
               {imgs.map((src, i) => (
                 <img
                   key={src}
                   src={src}
                   alt=""
                   onClick={() => setActive(i)}
-                  className={`h-12 w-16 flex-shrink-0 cursor-pointer rounded-lg object-cover transition ${
-                    i === active ? 'opacity-100 outline outline-2 outline-[#6c63ff]' : 'opacity-50'
+                  className={`h-12 w-16 shrink-0 cursor-pointer rounded-lg object-cover transition ${
+                    i === active ? 'opacity-100 outline outline-[#6c63ff]' : 'opacity-50'
                   }`}
                 />
               ))}
@@ -569,9 +571,9 @@ function DetailSheet({ item, onClose }: { item: DiscoveryItem; onClose: () => vo
             {flag(item.country)} {item.city}, {item.country}
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {item.tags?.category && (
+            {category(item) && (
               <span className="rounded-full border border-[rgba(240,192,64,.2)] bg-[rgba(240,192,64,.1)] px-2.5 py-0.5 text-xs capitalize text-[#f0c040]">
-                {item.tags.category}
+                {category(item)}
               </span>
             )}
             {subcategories(item).map((s) => (
@@ -627,11 +629,11 @@ function ResultOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/[.88] backdrop-blur-md"
+      className="fixed inset-0 z-100 flex items-end justify-center bg-black/88 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="max-h-[94vh] w-full max-w-[520px] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1a24] text-[#e8e8f0] transition-transform duration-300 [scrollbar-width:none]"
+        className="max-h-[94vh] w-full max-w-130 overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1a24] text-[#e8e8f0] transition-transform duration-300 scrollbar-none"
         style={{ transform: shown ? 'translateY(0)' : 'translateY(100%)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -650,11 +652,11 @@ function ResultOverlay({
         {result && top && (
           <>
             {/* Hero */}
-            <div className="relative h-[210px] overflow-hidden rounded-t-3xl">
+            <div className="relative h-52.5 overflow-hidden rounded-t-3xl">
               {top.heroImage && (
                 <img src={top.heroImage} alt="" className="h-full w-full object-cover" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-[#1a1a24]/30 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-[#1a1a24] via-[#1a1a24]/30 to-transparent" />
               <div className="absolute bottom-4 left-5 right-5">
                 <div className="text-xs uppercase tracking-wider text-white/60">
                   Ta prochaine destination ✈️
@@ -702,7 +704,7 @@ function ResultOverlay({
                         className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${
                           i === 0
                             ? 'border-[rgba(108,99,255,.4)] bg-[rgba(108,99,255,.08)]'
-                            : 'border-white/10 bg-white/[.04]'
+                            : 'border-white/10 bg-white/4'
                         }`}
                       >
                         <div className="text-xl">{['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`}</div>
@@ -716,7 +718,7 @@ function ResultOverlay({
                         </div>
                         <div className="h-1.5 w-16 overflow-hidden rounded bg-[#2a2a3e]">
                           <div
-                            className="h-full rounded bg-gradient-to-r from-[#6c63ff] to-[#a78bfa]"
+                            className="h-full rounded bg-linear-to-r from-[#6c63ff] to-[#a78bfa]"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -729,16 +731,16 @@ function ResultOverlay({
               {/* Liked places */}
               {top.likedHere.length > 0 && (
                 <Section title="Lieux que tu as likés ici">
-                  <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
+                  <div className="flex gap-2 overflow-x-auto scrollbar-none">
                     {top.likedHere.map((p: LikedPlace) => (
                       <a
                         key={p.id}
                         href={p.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-[120px] flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-[#1e1e2e] transition hover:scale-[1.03]"
+                        className="w-30 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-[#1e1e2e] transition hover:scale-[1.03]"
                       >
-                        <img src={p.mainMediaUrl} alt="" className="h-[76px] w-full object-cover" />
+                        <img src={p.mainMediaUrl} alt="" className="h-19 w-full object-cover" />
                         <div className="truncate px-2 py-1.5 text-[0.68rem]">{p.locationName}</div>
                       </a>
                     ))}
@@ -825,7 +827,7 @@ function SaveTripButton({ onSave, saveState }: { onSave: () => void; saveState: 
       <div className="mt-6">
         <button
           disabled
-          className="w-full rounded-xl bg-gradient-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white opacity-70"
+          className="w-full rounded-xl bg-linear-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white opacity-70"
         >
           Création du voyage…
         </button>
@@ -837,7 +839,7 @@ function SaveTripButton({ onSave, saveState }: { onSave: () => void; saveState: 
     <div className="mt-6">
       <button
         onClick={onSave}
-        className="w-full rounded-xl bg-gradient-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white shadow-lg transition hover:brightness-110"
+        className="w-full rounded-xl bg-linear-to-r from-[#6c63ff] to-[#a78bfa] px-8 py-3.5 text-sm font-bold text-white shadow-lg transition hover:brightness-110"
       >
         🗺️ Créer mon voyage
       </button>
@@ -863,7 +865,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[.04] px-3.5 py-3">
+    <div className="rounded-xl border border-white/10 bg-white/4 px-3.5 py-3">
       <div className="text-2xl font-extrabold">{value}</div>
       <div className="mt-0.5 text-xs text-[#9a9ac0]">{label}</div>
     </div>
@@ -874,7 +876,7 @@ function ScoreRing({ pct }: { pct: number }) {
   const C = 2 * Math.PI * 30
   const offset = C - (pct / 100) * C
   return (
-    <div className="relative h-[72px] w-[72px] flex-shrink-0">
+    <div className="relative h-18 w-18 shrink-0">
       <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
         <defs>
           <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -919,18 +921,18 @@ function Breakdown({ breakdown }: { breakdown: Destination['breakdown'] }) {
         const pct = Math.round((Math.abs(val) / max) * 100)
         return (
           <div key={key} className="flex items-center gap-2.5 text-xs">
-            <div className="w-[90px] flex-shrink-0 text-[#9a9ac0]">{label}</div>
+            <div className="w-22.5 shrink-0 text-[#9a9ac0]">{label}</div>
             <div className="h-1.5 flex-1 overflow-hidden rounded bg-[#2a2a3e]">
               <div
                 className={`h-full rounded ${
                   val >= 0
-                    ? 'bg-gradient-to-r from-[#6c63ff] to-[#a78bfa]'
-                    : 'bg-gradient-to-r from-[#e74c3c] to-[#ff8a80]'
+                    ? 'bg-linear-to-r from-[#6c63ff] to-[#a78bfa]'
+                    : 'bg-linear-to-r from-[#e74c3c] to-[#ff8a80]'
                 }`}
                 style={{ width: `${pct}%`, transition: 'width .8s ease' }}
               />
             </div>
-            <div className="w-9 flex-shrink-0 text-right text-[0.72rem] text-[#9a9ac0]">
+            <div className="w-9 shrink-0 text-right text-[0.72rem] text-[#9a9ac0]">
               {val >= 0 ? '+' : ''}
               {val.toFixed(1)}
             </div>
