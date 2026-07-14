@@ -53,7 +53,7 @@ function cleanDesc(desc: string): string {
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  hotel:     { label: 'Hébergement', color: '#6c63ff' },
+  hotel:     { label: 'Hébergement', color: '#FF4D4D' },
   'activité': { label: 'Activité',    color: '#2ecc71' },
   restaurant:{ label: 'Restaurant',  color: '#f39c12' },
 }
@@ -77,13 +77,13 @@ const s = StyleSheet.create({
   header: {
     marginBottom: 28,
     borderBottomWidth: 2,
-    borderBottomColor: '#6c63ff',
+    borderBottomColor: '#FF4D4D',
     paddingBottom: 16,
   },
   title: {
     fontSize: 22,
     fontFamily: 'Helvetica-Bold',
-    color: '#1a1a2e',
+    color: '#1a1a1a',
     marginBottom: 4,
   },
   subtitle: {
@@ -99,7 +99,7 @@ const s = StyleSheet.create({
   dayHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0effe',
+    backgroundColor: '#F2EDE8',
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -108,7 +108,7 @@ const s = StyleSheet.create({
   dayLabel: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    color: '#6c63ff',
+    color: '#FF4D4D',
     marginRight: 8,
   },
   dayDate: {
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   activityTitle: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    color: '#1a1a2e',
+    color: '#1a1a1a',
     flex: 1,
     marginRight: 8,
   },

@@ -15,12 +15,12 @@ export const Route = createFileRoute('/register')({
 
     const handleSignUp = async (e: React.SyntheticEvent) => {
       e.preventDefault();
-      await signUp.email({ 
-        email: formData.email, 
-        password: formData.password, 
-        name: formData.name 
+      await signUp.email({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name
       });
-      navigate({ to: '/' }); 
+      navigate({ to: '/' });
     };
 
     const handleGoogleSignIn = async () => {
@@ -31,44 +31,45 @@ export const Route = createFileRoute('/register')({
     }
 
     return (
-      <div className="min-h-screen flex flex-col justify-center px-6 py-12 bg-gray-50">
-        <div className="w-full max-w-sm mx-auto space-y-8">
+      <div className="min-h-screen flex flex-col justify-center px-6 py-12 bg-[#F2EDE8]">
+        <div className="w-full max-w-sm mx-auto space-y-7">
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Rejoindre Voyagr</h1>
-            <p className="mt-2 text-sm text-gray-600">Créez votre compte pour commencer</p>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FF4D4D] text-2xl shadow-lg shadow-red-500/25">✈️</div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#1a1a1a]">Rejoindre Voyagr</h1>
+            <p className="mt-2 text-sm text-[#888]">Crée ton compte pour commencer</p>
           </div>
 
-          <form onSubmit={handleSignUp} className="space-y-4">
-            <input 
+          <form onSubmit={handleSignUp} className="space-y-3">
+            <input
               type="text" placeholder="Nom" required
               value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 outline-none transition" 
+              className="w-full px-4 py-3.5 rounded-2xl border border-[#ddd] bg-white text-[#1a1a1a] placeholder-[#aaa] focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
             />
-            <input 
+            <input
               type="email" placeholder="Email" required
               value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 outline-none transition" 
+              className="w-full px-4 py-3.5 rounded-2xl border border-[#ddd] bg-white text-[#1a1a1a] placeholder-[#aaa] focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
             />
-            <input 
+            <input
               type="password" placeholder="Mot de passe" required
               value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-900 outline-none transition" 
+              className="w-full px-4 py-3.5 rounded-2xl border border-[#ddd] bg-white text-[#1a1a1a] placeholder-[#aaa] focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
             />
-            <button type="submit" className="w-full py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl transition">
+            <button type="submit" className="w-full py-3.5 bg-[#FF4D4D] text-white font-semibold rounded-2xl shadow-lg shadow-red-500/25 transition active:scale-95 hover:brightness-105">
               S'inscrire
             </button>
           </form>
 
-          <div className="relative flex items-center py-2">
-            <div className="grow border-t border-gray-300"></div>
-            <span className="shrink-0 mx-4 text-gray-400 text-sm">Ou</span>
-            <div className="grow border-t border-gray-300"></div>
+          <div className="relative flex items-center py-1">
+            <div className="grow border-t border-[#ddd]"></div>
+            <span className="shrink-0 mx-4 text-[#aaa] text-sm">Ou</span>
+            <div className="grow border-t border-[#ddd]"></div>
           </div>
 
           {/* Google Button */}
-          <button 
+          <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-300 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded-xl transition shadow-sm"
+            className="w-full flex items-center justify-center gap-3 py-3.5 border border-[#ddd] bg-white text-[#1a1a1a] font-semibold rounded-2xl transition active:scale-95 hover:bg-[#faf8f6] shadow-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -79,8 +80,8 @@ export const Route = createFileRoute('/register')({
             Continuer avec Google
           </button>
 
-          <p className="text-center text-sm text-gray-600">
-            Déjà un compte ? <Link to="/login" className="font-medium text-gray-900 hover:underline">Se connecter</Link>
+          <p className="text-center text-sm text-[#888]">
+            Déjà un compte ? <Link to="/login" className="font-semibold text-[#FF4D4D] hover:underline">Se connecter</Link>
           </p>
         </div>
       </div>
