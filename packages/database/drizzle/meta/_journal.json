@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1783068513759,
-      "tag": "0000_lazy_calypso",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1783087101341,
-      "tag": "0001_motionless_blink",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1783351888972,
-      "tag": "0002_rare_agent_zero",
+      "when": 1784152284561,
+      "tag": "0000_violet_bloodstorm",
       "breakpoints": true
     }
   ]

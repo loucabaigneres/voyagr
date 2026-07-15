@@ -98,7 +98,7 @@ CREATE TABLE "imported_inspiration" (
 CREATE TABLE "swipe" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" text NOT NULL,
-	"discovery_context_id" uuid NOT NULL,
+	"discovery_content_id" uuid NOT NULL,
 	"direction" "swipe_direction" NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -137,11 +137,11 @@ CREATE TABLE "trip" (
 	"title" text,
 	"destination" text,
 	"number_people" integer,
-	"age" jsonb,
+	"ages" jsonb,
 	"intensity" "trip_intensity",
 	"average_price" "average_price",
 	"start_date" date,
-	"end_date" date,
+	"duration_days" integer,
 	"dietary_restrictions" text,
 	"medical_conditions" text,
 	"interests" jsonb,
@@ -164,10 +164,10 @@ CREATE TABLE "trip_day" (
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "generated_document" ADD CONSTRAINT "generated_document_trip_id_trip_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trip"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "swipe" ADD CONSTRAINT "swipe_discovery_context_id_discovery_content_id_fk" FOREIGN KEY ("discovery_context_id") REFERENCES "public"."discovery_content"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "swipe" ADD CONSTRAINT "swipe_discovery_content_id_discovery_content_id_fk" FOREIGN KEY ("discovery_content_id") REFERENCES "public"."discovery_content"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment_transaction" ADD CONSTRAINT "payment_transaction_trip_id_trip_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trip"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "activity" ADD CONSTRAINT "activity_trip_day_id_trip_day_id_fk" FOREIGN KEY ("trip_day_id") REFERENCES "public"."trip_day"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "activity" ADD CONSTRAINT "activity_discovery_content_id_discovery_content_id_fk" FOREIGN KEY ("discovery_content_id") REFERENCES "public"."discovery_content"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trip_day" ADD CONSTRAINT "trip_day_trip_id_trip_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trip"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "user_swipe_idx" ON "swipe" USING btree ("user_id","discovery_context_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_swipe_idx" ON "swipe" USING btree ("user_id","discovery_content_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "trip_day_idx" ON "trip_day" USING btree ("trip_id","day_index");

@@ -1,5 +1,5 @@
 {
-  "id": "8a633d4e-2db9-4c34-954a-e764519e05a0",
+  "id": "5d884846-0756-4d98-a8fb-1e1a75aad016",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -93,8 +93,12 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -170,8 +174,12 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -181,7 +189,9 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -268,7 +278,9 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -375,8 +387,12 @@
           "name": "generated_document_trip_id_trip_id_fk",
           "tableFrom": "generated_document",
           "tableTo": "trip",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -473,7 +489,9 @@
         "discovery_content_url_unique": {
           "name": "discovery_content_url_unique",
           "nullsNotDistinct": false,
-          "columns": ["url"]
+          "columns": [
+            "url"
+          ]
         }
       },
       "policies": {},
@@ -562,8 +580,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "discovery_context_id": {
-          "name": "discovery_context_id",
+        "discovery_content_id": {
+          "name": "discovery_content_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -594,7 +612,7 @@
               "nulls": "last"
             },
             {
-              "expression": "discovery_context_id",
+              "expression": "discovery_content_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -607,12 +625,16 @@
         }
       },
       "foreignKeys": {
-        "swipe_discovery_context_id_discovery_content_id_fk": {
-          "name": "swipe_discovery_context_id_discovery_content_id_fk",
+        "swipe_discovery_content_id_discovery_content_id_fk": {
+          "name": "swipe_discovery_content_id_discovery_content_id_fk",
           "tableFrom": "swipe",
           "tableTo": "discovery_content",
-          "columnsFrom": ["discovery_context_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "discovery_content_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -694,8 +716,12 @@
           "name": "payment_transaction_trip_id_trip_id_fk",
           "tableFrom": "payment_transaction",
           "tableTo": "trip",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -705,7 +731,9 @@
         "payment_transaction_stripe_session_id_unique": {
           "name": "payment_transaction_stripe_session_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["stripe_session_id"]
+          "columns": [
+            "stripe_session_id"
+          ]
         }
       },
       "policies": {},
@@ -796,8 +824,12 @@
           "name": "activity_trip_day_id_trip_day_id_fk",
           "tableFrom": "activity",
           "tableTo": "trip_day",
-          "columnsFrom": ["trip_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -805,8 +837,12 @@
           "name": "activity_discovery_content_id_discovery_content_id_fk",
           "tableFrom": "activity",
           "tableTo": "discovery_content",
-          "columnsFrom": ["discovery_content_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "discovery_content_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -852,8 +888,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "age": {
-          "name": "age",
+        "ages": {
+          "name": "ages",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -878,9 +914,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "end_date": {
-          "name": "end_date",
-          "type": "date",
+        "duration_days": {
+          "name": "duration_days",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -1017,8 +1053,12 @@
           "name": "trip_day_trip_id_trip_id_fk",
           "tableFrom": "trip_day",
           "tableTo": "trip",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1034,42 +1074,73 @@
     "public.average_price": {
       "name": "average_price",
       "schema": "public",
-      "values": ["budget", "mid", "premium"]
+      "values": [
+        "budget",
+        "mid",
+        "premium"
+      ]
     },
     "public.document_type": {
       "name": "document_type",
       "schema": "public",
-      "values": ["free_summary", "premium_guide"]
+      "values": [
+        "free_summary",
+        "premium_guide"
+      ]
     },
     "public.payment_status": {
       "name": "payment_status",
       "schema": "public",
-      "values": ["pending", "completed", "failed", "refunded"]
+      "values": [
+        "pending",
+        "completed",
+        "failed",
+        "refunded"
+      ]
     },
     "public.platform": {
       "name": "platform",
       "schema": "public",
-      "values": ["tiktok", "instagram", "other"]
+      "values": [
+        "tiktok",
+        "instagram",
+        "other"
+      ]
     },
     "public.processing_status": {
       "name": "processing_status",
       "schema": "public",
-      "values": ["pending", "analyzed", "failed"]
+      "values": [
+        "pending",
+        "analyzed",
+        "failed"
+      ]
     },
     "public.swipe_direction": {
       "name": "swipe_direction",
       "schema": "public",
-      "values": ["like", "dislike"]
+      "values": [
+        "like",
+        "dislike"
+      ]
     },
     "public.trip_intensity": {
       "name": "trip_intensity",
       "schema": "public",
-      "values": ["chill", "balanced", "intense"]
+      "values": [
+        "chill",
+        "balanced",
+        "intense"
+      ]
     },
     "public.trip_status": {
       "name": "trip_status",
       "schema": "public",
-      "values": ["draft", "finalized", "archived"]
+      "values": [
+        "draft",
+        "finalized",
+        "archived"
+      ]
     }
   },
   "schemas": {},
