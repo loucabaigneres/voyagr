@@ -6,6 +6,8 @@ const envSchema = z.object({
 });
 
 // Parse and validate environment variables
+// eslint-disable-next-line no-console
+console.log('🛠️ DEBUG CI/CD - Valeur reçue :', `'${import.meta.env.VITE_API_URL}'`);
 const parsedEnv = envSchema.safeParse(import.meta.env);
 
 if (!parsedEnv.success) {
