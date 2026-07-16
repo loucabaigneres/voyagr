@@ -1,4 +1,4 @@
-import type { DiscoveryTags } from '@voyagr/database/src/schemas/inspiration';
+import type { DiscoveryTags } from '@voyagr/database';
 import { motion, useMotionValue, useTransform, type PanInfo } from 'motion/react';
 import type { RouterInputs, RouterOutputs } from '../lib/trpc';
 
@@ -77,7 +77,7 @@ export function SwipeCard({ card, onSwipe, isFront }: SwipeCardProps) {
         </h2>
         
         <div className="flex flex-wrap gap-2 mb-3">
-          {tags?.subcategory?.map((tag) => (
+          {tags?.subcategory?.map((tag: string) => (
             <span key={tag} className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-medium">
               #{tag}
             </span>
