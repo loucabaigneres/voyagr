@@ -24,5 +24,10 @@ export const auth = betterAuth({
     //     }
     //   : {}),
   },
-  trustedOrigins: [env.FRONTEND_URL],
+  trustedOrigins: [
+    'https://voyagr-web-mu.vercel.app',
+    'https://voyagr-web-*.vercel.app',
+    'voyagr-*-arthurgramonts-projects.vercel.app',
+    env.FRONTEND_URL,
+  ],
 });
