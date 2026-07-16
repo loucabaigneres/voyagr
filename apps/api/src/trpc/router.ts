@@ -1,7 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { swipeDirectionEnum } from '@voyagr/database/src/enums.js';
-import { discoveryContent, swipes } from '@voyagr/database/src/schemas/inspiration.js';
-import { trip } from '@voyagr/database/src/schemas/trip.js';
+import { swipeDirectionEnum, discoveryContent, swipes, trip } from '@voyagr/database';
 import { and, eq, notExists } from 'drizzle-orm';
 import * as z from 'zod';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
