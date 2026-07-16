@@ -155,9 +155,6 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      - name: DEBUG - Afficher ce que Vercel a téléchargé
-        run: cat apps/web/.env
-
       - name: Build Project Artifacts (Vercel)
         run: vercel build ${{ needs.setup-environment.outputs.vercel_args }} --token=${{ secrets.VERCEL_TOKEN }} --cwd=apps/web
         env:
