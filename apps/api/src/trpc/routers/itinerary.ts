@@ -274,7 +274,7 @@ export const itineraryRouter = {
               .where(inArray(activity.tripDayId, dayIds))
           : [];
 
-      const catalog = getCatalog();
+      const catalog = await getCatalog(ctx.db);
       const tripCity = tripRow.destination ?? '';
 
       // Single catalog pass: build catByCoords + per-category pools for this city
