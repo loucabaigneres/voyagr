@@ -398,29 +398,47 @@ export const itineraryRouter = {
 
       const dayPlans: ItinItem[][] = [];
 
-      for (let d = 0; d < numDays; d++) {
-        const plan: ItinItem[] = [];
+      // Group consecutive days into hotel "stays" of a few days each instead
+      // of swapping hotels every single day.
+      const MIN_STAY_DAYS = 1;
+      const MAX_STAY_DAYS = 4;
+      let dayCursor = 0;
+      while (dayCursor < numDays) {
+        const remaining = numDays - dayCursor;
+        const stayLength =
+          remaining <= MIN_STAY_DAYS
+            ? remaining
+            : Math.min(
+                remaining,
+                MIN_STAY_DAYS + Math.floor(Math.random() * (MAX_STAY_DAYS - MIN_STAY_DAYS + 1)),
+              );
 
         const hotel = pickFrom(allHotels, centerLat, centerLng);
-        if (hotel) addItem(hotel, plan);
 
-        const anchorLat = plan[0]?.lat ?? centerLat;
-        const anchorLng = plan[0]?.lng ?? centerLng;
+        for (let i = 0; i < stayLength; i++) {
+          const plan: ItinItem[] = [];
+          if (hotel) addItem(hotel, plan);
 
-        const dayActs = allActivities
-          .filter((a) => !usedIds.has(a.activityId))
-          .sort(
-            (a, b) =>
-              scoreItem(a, anchorLat, anchorLng, targetPriceRank) -
-              scoreItem(b, anchorLat, anchorLng, targetPriceRank),
-          )
-          .slice(0, actsPerDay);
-        for (const act of dayActs) addItem(act, plan);
+          const anchorLat = hotel?.lat ?? centerLat;
+          const anchorLng = hotel?.lng ?? centerLng;
 
-        const resto = pickFrom(allRestaurants, anchorLat, anchorLng);
-        if (resto) addItem(resto, plan);
+          const dayActs = allActivities
+            .filter((a) => !usedIds.has(a.activityId))
+            .sort(
+              (a, b) =>
+                scoreItem(a, anchorLat, anchorLng, targetPriceRank) -
+                scoreItem(b, anchorLat, anchorLng, targetPriceRank),
+            )
+            .slice(0, actsPerDay);
+          for (const act of dayActs) addItem(act, plan);
 
-        dayPlans.push(plan);
+          const resto = pickFrom(allRestaurants, anchorLat, anchorLng);
+          if (resto) addItem(resto, plan);
+
+          dayPlans.push(plan);
+        }
+
+        dayCursor += stayLength;
       }
 
       // Persist — delete old days/activities then insert new ones
