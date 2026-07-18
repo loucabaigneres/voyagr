@@ -2,6 +2,7 @@ import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
 import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import type { Context } from '../context.js';
 
 import { activity, discoveryContent, trip, tripDay } from '../../lib/tables.js';
 import { publicProcedure } from '../init.js';
@@ -83,7 +84,7 @@ function calcNumDays(durationDays: number | null): number {
 // ─── DB fetch ─────────────────────────────────────────────────────────────────
 
 async function fetchNearbyFromDb(
-  db: any,
+  db: Context['db'],
   category: string,
   city: string,
   lat: number,
@@ -274,7 +275,7 @@ export const itineraryRouter = {
               .where(inArray(activity.tripDayId, dayIds))
           : [];
 
-      const catalog = getCatalog();
+      const catalog = await getCatalog(ctx.db);
       const tripCity = tripRow.destination ?? '';
 
       // Single catalog pass: build catByCoords + per-category pools for this city

@@ -1,9 +1,9 @@
 // import type { VoyagrDb } from '#/db/voyagr';
+import type { Context } from '../context.js';
 import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
 import type { DiscoveryContentData } from '@voyagr/database';
-import { loadDiscoveryData } from '@voyagr/database';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DiscoveryItem, SwipeRecord } from '../../lib/recommendation/algorithm.js';
 import { rankDestinations, recommend } from '../../lib/recommendation/algorithm.js';
@@ -105,16 +105,15 @@ function applyMaxRunByCategory(items: DiscoveryItem[], maxRun: number): Discover
   return result;
 }
 
-/** Active catalog, sourced from data.json (no database required). */
-export function getCatalog(): DiscoveryItem[] {
-  return applyMaxRunByCategory(
-    interleaveByCityRoundRobin(
-      loadDiscoveryData()
-        .filter((item) => item.isActive !== false)
-        .map(toDiscoveryItem),
-    ),
-    3,
-  );
+/** Active catalog, sourced from database */
+export async function getCatalog(db: Context['db']): Promise<DiscoveryItem[]> {
+  const rawData = await db
+    .select()
+    .from(discoveryContent)
+    .where(eq(discoveryContent.isActive, true));
+
+  const catalog = rawData.map(toDiscoveryItem);
+  return applyMaxRunByCategory(interleaveByCityRoundRobin(catalog), 3);
 }
 
 /** A swipe sent by the client (swipes are tracked client-side, not persisted). */
@@ -142,7 +141,9 @@ function buildSwipeHistory(
 
 export const discoveryRouter = {
   /** The full active catalog of cards to swipe. */
-  feed: publicProcedure.query(() => getCatalog()),
+  feed: publicProcedure.query(async ({ ctx }) => {
+    return await getCatalog(ctx.db);
+  }),
 
   /** Run the recommendation algorithm over a client-provided swipe history. */
   recommendation: publicProcedure
@@ -152,8 +153,8 @@ export const discoveryRouter = {
         topN: z.number().int().min(1).max(10).default(3),
       }),
     )
-    .query(({ input }) => {
-      const catalog = getCatalog();
+    .query(async ({ ctx, input }) => {
+      const catalog = await getCatalog(ctx.db);
       const history = buildSwipeHistory(input.swipes, catalog);
       const result = recommend(history, catalog, input.topN);
 
@@ -200,8 +201,8 @@ export const discoveryRouter = {
    */
   rankCities: publicProcedure
     .input(z.object({ swipes: z.array(swipeInput) }))
-    .query(({ input }) => {
-      const catalog = getCatalog();
+    .query(async ({ ctx, input }) => {
+      const catalog = await getCatalog(ctx.db);
       const history = buildSwipeHistory(input.swipes, catalog);
 
       return rankDestinations(history, catalog).map(({ city, score, vetoed }) => ({
@@ -218,7 +219,7 @@ export const discoveryRouter = {
   saveTrip: publicProcedure
     .input(z.object({ swipes: z.array(swipeInput) }))
     .mutation(async ({ ctx, input }) => {
-      const catalog = getCatalog();
+      const catalog = await getCatalog(ctx.db);
       const history = buildSwipeHistory(input.swipes, catalog);
 
       // Recompute the recommendation so the saved destination matches the UI.

@@ -19,7 +19,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1),
 
   // Frontend URL configuration
-  FRONTEND_URL: z.url(),
+  FRONTEND_URL: z.url().default('http://localhost:5173'),
 });
 
 // Parse and validate environment variables

@@ -141,10 +141,16 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Pre-build Monorepo Dependencies
-        run: pnpm run build --filter="!website"
+        run: pnpm run build --filter="@voyagr/database" --filter="@voyagr/api"
 
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=${{ needs.setup-environment.outputs.vercel_env }} --token=${{ secrets.VERCEL_TOKEN }} --cwd=apps/web
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Pull Vercel Environment Variables
+        run: vercel env pull .env --environment=${{ needs.setup-environment.outputs.vercel_env }} --token=${{ secrets.VERCEL_TOKEN }} --cwd=apps/web
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
