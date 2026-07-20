@@ -60,8 +60,11 @@ Create `apps/api/.env`:
 DATABASE_URL=postgres://admin:password@db:5432/voyagr
 PORT=3000
 NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
 BETTER_AUTH_SECRET=generate_a_random_string_here
+BETTER_AUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=found_in_your_google_cloud_console
+GOOGLE_CLIENT_SECRET=found_in_your_google_cloud_console
+FRONTEND_URL=http://localhost:5173
 ```
 
 Create `apps/web/.env`:
