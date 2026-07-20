@@ -12,7 +12,7 @@ export function ImportInspirationForm() {
     reset,
     formState: { errors },
   } = useForm<ImportInspirationValues>({
-    resolver: zodResolver(importInspirationSchema),
+    resolver: zodResolver(importInspirationSchema as never),
     defaultValues: { url: '' },
   });
 
