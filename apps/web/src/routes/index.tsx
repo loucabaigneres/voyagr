@@ -48,12 +48,6 @@ export const Route = createFileRoute('/')({
         <div className="absolute top-0 w-full p-4 flex justify-between items-center z-50">
           <div className="text-white font-bold">Voyagr</div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate({ to: '/import' })}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
-            >
-              Importer une vidéo
-            </button>
             {session ? (
               <button
                 onClick={handleSignOut}
