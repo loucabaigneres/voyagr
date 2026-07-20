@@ -4,6 +4,7 @@ import { and, eq, notExists } from 'drizzle-orm';
 import * as z from 'zod';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
 import { discoveryRouter } from './routers/discovery.js';
+import { inspirationRouter } from './routers/inspiration.js';
 import { itineraryRouter } from './routers/itinerary.js';
 import { tripFormSchema } from './schemas/trip.js';
 
@@ -152,6 +153,10 @@ export const appRouter = createTRPCRouter({
   discovery: createTRPCRouter({
     ...discoveryRouter,
     ...itineraryRouter,
+  }),
+
+  inspiration: createTRPCRouter({
+    ...inspirationRouter,
   }),
 });
 

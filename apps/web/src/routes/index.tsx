@@ -47,21 +47,29 @@ export const Route = createFileRoute('/')({
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center overflow-hidden">
         <div className="absolute top-0 w-full p-4 flex justify-between items-center z-50">
           <div className="text-white font-bold">Voyagr</div>
-          {session ? (
-            <button 
-              onClick={handleSignOut}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate({ to: '/import' })}
               className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
             >
-              Déconnexion
+              Importer une vidéo
             </button>
-          ) : (
-            <button 
-              onClick={() => navigate({ to: '/login' })} 
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
-            >
-              Se connecter
-            </button>
-          )}
+            {session ? (
+              <button
+                onClick={handleSignOut}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
+              >
+                Déconnexion
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate({ to: '/login' })}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
+              >
+                Se connecter
+              </button>
+            )}
+          </div>
         </div>
         {/* Container de la pile de cartes */}
         <div className="relative w-full max-w-sm h-[70vh] flex items-center justify-center">
