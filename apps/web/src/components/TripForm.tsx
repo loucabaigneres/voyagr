@@ -94,23 +94,23 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 sm:p-8 bg-white rounded-3xl shadow-sm mt-6">
+    <div className="mx-auto mt-6 max-w-2xl rounded-3xl bg-white p-6 shadow-sm sm:p-8 desktop:max-w-3xl desktop:p-10">
 
       {/* --- EN-TÊTE ET BARRE DE PROGRESSION --- */}
       <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-extrabold text-[#1a1a1a]">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">
             {step === 1 && "Les bases du voyage"}
             {step === 2 && "L'ambiance"}
             {step === 3 && "Les derniers détails"}
           </h1>
-          <span className="text-sm font-medium text-[#aaa]">Étape {step} sur {totalSteps}</span>
+          <span className="shrink-0 text-sm font-medium text-muted">Étape {step} sur {totalSteps}</span>
         </div>
 
         {/* Barre de progression visuelle */}
-        <div className="w-full bg-[#F2EDE8] rounded-full h-2">
+        <div className="h-2 w-full rounded-full bg-surface">
           <div
-            className="bg-[#FF4D4D] h-2 rounded-full transition-all duration-300"
+            className="h-2 rounded-full bg-primary transition-all duration-300"
             style={{ width: `${(step / totalSteps) * 100}%` }}
           ></div>
         </div>
@@ -124,23 +124,23 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Destination</label>
-                <input {...register("destination")} readOnly className="w-full border border-[#ddd] p-3 rounded-xl bg-[#F2EDE8] text-[#888]" />
+                <input {...register("destination")} readOnly className="min-h-12 w-full cursor-not-allowed rounded-xl border border-border bg-surface p-3 font-medium text-ink-soft" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Date de départ</label>
-                <input type="date" {...register("startDate")} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" />
-                {errors.startDate && <span className="text-red-500 text-xs">{errors.startDate.message}</span>}
+                <input type="date" {...register("startDate")} className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
+                {errors.startDate && <span className="text-xs font-medium text-primary-dark">{errors.startDate.message}</span>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Durée (jours)</label>
-                <input type="number" {...register("durationDays", { valueAsNumber: true })} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" />
+                <input type="number" {...register("durationDays", { valueAsNumber: true })} className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Nombre de voyageurs</label>
-                <input type="number" min="1" {...register("numberOfPeople", { valueAsNumber: true })} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" />
+                <input type="number" min="1" {...register("numberOfPeople", { valueAsNumber: true })} className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
               </div>
             </div>
 
@@ -149,11 +149,12 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                 {ageFields.map((field, index) => (
                   <div key={field.id} className="relative">
-                    <span className="absolute left-3 top-3 text-sm text-gray-400">#{index + 1}</span>
-                    <input 
-                      type="number" 
-                      {...register(`ages.${index}.value`, { valueAsNumber: true })} 
-                      className="w-full border border-[#ddd] p-3 pl-8 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition" 
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">#{index + 1}</span>
+                    <input
+                      type="number"
+                      aria-label={`Âge du voyageur ${index + 1}`}
+                      {...register(`ages.${index}.value`, { valueAsNumber: true })}
+                      className="min-h-12 w-full rounded-xl border border-border bg-white p-3 pl-8 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
                     />
                   </div>
                 ))}
@@ -168,7 +169,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-2">Rythme souhaité</label>
-                <select {...register("intensity")} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition">
+                <select {...register("intensity")} className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25">
                   <option value="chill">Relax (Prendre son temps)</option>
                   <option value="balanced">Équilibré (Un peu de tout)</option>
                   <option value="intense">Intense (Explorer un max)</option>
@@ -176,7 +177,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Budget moyen / personne</label>
-                <select {...register("averagePrice")} className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition">
+                <select {...register("averagePrice")} className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25">
                   <option value="budget">Petit budget</option>
                   <option value="mid">Moyen</option>
                   <option value="premium">Premium</option>
@@ -194,8 +195,9 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                       key={interest.id}
                       type="button"
                       onClick={() => toggleInterest(interest.id)}
-                      className={`px-5 py-2.5 rounded-full border text-sm transition-all ${
-                        isSelected ? 'bg-[#FF4D4D] text-white border-[#FF4D4D] scale-105 shadow-sm' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
+                      aria-pressed={isSelected}
+                      className={`min-h-11 rounded-full border px-5 py-2.5 text-sm font-medium transition-all ${
+                        isSelected ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white text-ink-soft hover:border-primary/40 hover:bg-surface'
                       }`}
                     >
                       {interest.label}
@@ -203,7 +205,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                   );
                 })}
               </div>
-              {errors.interests && <span className="text-red-500 text-xs block mt-2">{errors.interests.message}</span>}
+              {errors.interests && <span className="mt-2 block text-xs font-medium text-primary-dark">{errors.interests.message}</span>}
             </div>
           </div>
         )}
@@ -221,8 +223,8 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     key={option.id}
                     type="button"
                     onClick={() => toggleArrayItem("dietaryOptions", option.id, currentDietary)}
-                    className={`px-4 py-2 rounded-full border text-sm transition-all ${
-                      currentDietary.includes(option.id) ? 'bg-[#FF4D4D] text-white border-[#FF4D4D]' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
+                    className={`min-h-11 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                      currentDietary.includes(option.id) ? 'border-primary bg-primary text-white' : 'border-border bg-white text-ink-soft hover:border-primary/40 hover:bg-surface'
                     }`}
                   >
                     {option.label}
@@ -233,12 +235,12 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                 type="text"
                 {...register("dietaryCustom")} 
                 placeholder="Autre chose à préciser ? (Ex: Allergie aux arachides)" 
-                className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
+                className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
               />
             </div>
 
             {/* Section Médical */}
-            <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-4 border-t border-border pt-4">
               <label className="block text-sm font-medium">Conditions médicales</label>
               <div className="flex flex-wrap gap-2 mb-3">
                 {MEDICAL_OPTIONS.map(option => (
@@ -246,8 +248,8 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     key={option.id}
                     type="button"
                     onClick={() => toggleArrayItem("medicalOptions", option.id, currentMedical)}
-                    className={`px-4 py-2 rounded-full border text-sm transition-all ${
-                      currentMedical.includes(option.id) ? 'bg-[#FF4D4D] text-white border-[#FF4D4D]' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
+                    className={`min-h-11 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                      currentMedical.includes(option.id) ? 'border-primary bg-primary text-white' : 'border-border bg-white text-ink-soft hover:border-primary/40 hover:bg-surface'
                     }`}
                   >
                     {option.label}
@@ -258,7 +260,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                 type="text"
                 {...register("medicalCustom")} 
                 placeholder="Un besoin spécifique ? (Ex: Problèmes de dos)" 
-                className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
+                className="min-h-12 w-full rounded-xl border border-border bg-white p-3 text-ink transition outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
               />
             </div>
 
@@ -266,29 +268,29 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
         )}
 
         {/* --- BOUTONS DE NAVIGATION --- */}
-        <div className="pt-8 mt-8 border-t flex justify-between items-center">
-          <button 
-            type="button" 
+        <div className="mt-8 flex items-center justify-between gap-3 border-t border-border pt-8">
+          <button
+            type="button"
             onClick={handlePrev}
             disabled={step === 1}
-            className={`px-6 py-3 font-medium rounded-lg transition-colors ${step === 1 ? 'invisible' : 'text-[#888] hover:bg-[#F2EDE8]'}`}
+            className={`min-h-12 rounded-lg px-6 py-3 font-medium transition-colors ${step === 1 ? 'invisible' : 'text-ink-soft hover:bg-surface'}`}
           >
             Retour
           </button>
 
           {step < totalSteps ? (
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={handleNext}
-              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 transition"
+              className="min-h-12 rounded-xl bg-primary px-8 py-3 font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98]"
             >
               Suivant
             </button>
           ) : (
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isLoading}
-              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 disabled:opacity-50 transition"
+              className="min-h-12 rounded-xl bg-primary px-8 py-3 font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:opacity-50"
             >
               {isLoading ? "Génération..." : "Terminer ✨"}
             </button>

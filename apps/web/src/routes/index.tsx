@@ -44,50 +44,69 @@ export const Route = createFileRoute('/')({
     };
 
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center overflow-hidden">
-        <div className="absolute top-0 w-full p-4 flex justify-between items-center z-50">
-          <div className="text-white font-bold">Voyagr</div>
-          {session ? (
-            <button 
-              onClick={handleSignOut}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
-            >
-              Déconnexion
-            </button>
-          ) : (
-            <button 
-              onClick={() => navigate({ to: '/login' })} 
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-600 text-white font-semibold rounded-xl transition"
-            >
-              Se connecter
-            </button>
-          )}
-        </div>
-        {/* Container de la pile de cartes */}
-        <div className="relative w-full max-w-sm h-[70vh] flex items-center justify-center">
-          {isLoading ? (
-            <div className="text-white animate-pulse">Recherche d'inspirations...</div>
-          ) : localCards.length === 0 ? (
-            <div className="text-white text-center">
-              <h3 className="text-2xl font-bold mb-2">Plus d'inspirations !</h3>
-              <p className="text-gray-400 mb-6">Vous avez tout vu.</p>
-              <button 
-                onClick={() => refetch()} 
-                className="px-6 py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition"
-              >
-                Recharger
-              </button>
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink md:bg-surface">
+        {/* Branded backdrop behind the frame (tablet + desktop) */}
+        <div
+          className="pointer-events-none absolute inset-0 hidden md:block"
+          style={{
+            background:
+              'radial-gradient(90% 60% at 50% 0%, rgba(255,123,40,0.10) 0%, rgba(255,78,74,0.06) 40%, transparent 70%)',
+          }}
+        />
+
+        {/* Phone-like frame: full screen on mobile, centered on tablet/desktop */}
+        <div className="relative flex h-screen w-full flex-col overflow-hidden bg-ink md:h-[min(92vh,820px)] md:w-[420px] md:rounded-[2.25rem] md:shadow-2xl md:ring-1 md:ring-black/5">
+          {/* Top bar */}
+          <div className="absolute inset-x-0 top-0 z-50 flex items-center justify-between px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-3">
+            <div className="flex items-center gap-2 text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-base">✈️</span>
+              <span className="text-base font-extrabold tracking-tight">Voyagr</span>
             </div>
-          ) : (
-            localCards.map((card, index) => (
-              <SwipeCard
-                key={card.id}
-                card={card}
-                isFront={index === 0}
-                onSwipe={handleSwipe}
-              />
-            )).reverse()
-          )}
+            {session ? (
+              <button
+                onClick={handleSignOut}
+                className="min-h-9 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-primary shadow-lg shadow-black/20 transition hover:bg-surface active:scale-95"
+              >
+                Déconnexion
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate({ to: '/login' })}
+                className="min-h-9 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-primary shadow-lg shadow-black/20 transition hover:bg-surface active:scale-95"
+              >
+                Se connecter
+              </button>
+            )}
+          </div>
+
+          {/* Card stack */}
+          <div className="relative flex flex-1 items-center justify-center px-4">
+            <div className="relative flex h-[70vh] max-h-[600px] w-full max-w-sm items-center justify-center">
+              {isLoading ? (
+                <div className="animate-pulse text-white/80">Recherche d'inspirations…</div>
+              ) : localCards.length === 0 ? (
+                <div className="px-6 text-center text-white">
+                  <h3 className="mb-2 text-2xl font-bold">Plus d'inspirations !</h3>
+                  <p className="mb-6 text-white/60">Vous avez tout vu.</p>
+                  <button
+                    onClick={() => refetch()}
+                    className="min-h-11 rounded-full bg-primary px-6 py-2.5 font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary-dark active:scale-95"
+                  >
+                    Recharger
+                  </button>
+                </div>
+              ) : (
+                localCards.map((card, index) => (
+                  <SwipeCard
+                    key={card.id}
+                    card={card}
+                    isFront={index === 0}
+                    onSwipe={handleSwipe}
+                  />
+                )).reverse()
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

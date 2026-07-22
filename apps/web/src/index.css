@@ -1,1 +1,58 @@
 @import 'tailwindcss';
+
+/* ─── Design tokens (charte Voyagr) ────────────────────────────────────────── */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Marque */
+  --color-primary: #ff4e4a; /* rouge principal */
+  --color-primary-dark: #a2101b; /* rouge profond — hover/active/focus */
+  --color-accent: #ff7b28; /* orange — accents secondaires */
+
+  /* Texte */
+  --color-ink: #060606; /* texte principal */
+  --color-ink-soft: #3f3e3e; /* texte secondaire */
+  --color-muted: #858181; /* texte tertiaire / labels */
+
+  /* Surfaces */
+  --color-surface: #f2f0ef; /* fond d'app */
+  --color-border: #e5dfdd; /* bordures / séparateurs */
+
+  /* Breakpoints charte : tablette 768, desktop 1440 */
+  --breakpoint-desktop: 90rem; /* 1440px */
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    /* Empêche le débordement horizontal global sur tous les breakpoints */
+    overflow-x: hidden;
+  }
+
+  /* Cible tactile minimum sur les contrôles (WCAG 2.5.5 / 44px) */
+  button,
+  [role='button'],
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Respecte la préférence de mouvement réduit pour toutes les transitions */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

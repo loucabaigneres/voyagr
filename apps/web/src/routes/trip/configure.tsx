@@ -50,19 +50,25 @@ function TripConfigurePage() {
 
   if (tripId && existingTripQuery.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8]">
-        <p className="text-[#888]">Chargement…</p>
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <p className="text-muted">Chargement…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F2EDE8] px-4 py-8">
-      <TripForm
-        initialDestination={existingTripQuery.data?.destination ?? 'Paris'}
-        onSubmit={handleFormSubmit}
-        isLoading={isLoading}
-      />
+    <div className="min-h-screen bg-surface px-4 py-8 sm:px-6 desktop:py-12">
+      <div className="mx-auto max-w-2xl desktop:max-w-3xl">
+        <div className="mb-2 flex items-center gap-2 px-1 text-ink-soft">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-base text-white">✈️</span>
+          <span className="text-base font-extrabold tracking-tight text-ink">Voyagr</span>
+        </div>
+        <TripForm
+          initialDestination={existingTripQuery.data?.destination ?? 'Paris'}
+          onSubmit={handleFormSubmit}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   )
 }

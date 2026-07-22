@@ -14,9 +14,9 @@ type Day = TripData['days'][number]
 type Activity = Day['activities'][number]
 
 const CATEGORY_META: Record<string, { emoji: string; label: string; color: string }> = {
-  hotel:      { emoji: '🏨', label: 'Hébergement', color: 'rgba(255,77,77,.12)' },
-  'activité': { emoji: '🗺️', label: 'Activité',    color: 'rgba(46,204,113,.12)' },
-  restaurant: { emoji: '🍽️', label: 'Restaurant',  color: 'rgba(255,160,60,.14)' },
+  hotel:      { emoji: '🏨', label: 'Hébergement', color: 'rgba(255,78,74,.12)' },
+  'activité': { emoji: '🗺️', label: 'Activité',    color: 'rgba(255,123,40,.14)' },
+  restaurant: { emoji: '🍽️', label: 'Restaurant',  color: 'rgba(162,16,27,.10)' },
 }
 
 function categoryMeta(cat: string | null) {
@@ -36,17 +36,17 @@ function TripPage() {
 
   if (tripQuery.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8]">
-        <div className="text-sm text-[#888]">Chargement…</div>
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <div className="text-sm text-muted">Chargement…</div>
       </div>
     )
   }
 
   if (tripQuery.isError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F2EDE8]">
-        <p className="text-sm text-[#FF4D4D]">Voyage introuvable.</p>
-        <Link to="/discovery" className="text-sm font-semibold text-[#FF4D4D] underline">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface">
+        <p className="text-sm text-primary">Voyage introuvable.</p>
+        <Link to="/discovery" className="text-sm font-semibold text-primary underline">
           Retour à la découverte
         </Link>
       </div>
@@ -56,13 +56,13 @@ function TripPage() {
   const { trip, days, isGenerated } = tripQuery.data
 
   return (
-    <div className="min-h-screen bg-[#F2EDE8] text-[#1a1a1a]">
+    <div className="min-h-screen bg-surface text-ink">
       {/* Header */}
-      <div className="border-b border-[#e5ded6] bg-white">
-        <div className="mx-auto max-w-2xl px-4 py-5">
+      <div className="border-b border-border bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
           <Link
             to="/discovery"
-            className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#888] hover:text-[#FF4D4D]"
+            className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-primary"
           >
             ← Retour
           </Link>
@@ -70,15 +70,15 @@ function TripPage() {
             <div>
               <h1 className="text-2xl font-extrabold">{trip.title ?? 'Mon voyage'}</h1>
               {trip.destination && (
-                <p className="mt-0.5 flex items-center gap-1 text-sm text-[#888]">
-                  <svg className="h-4 w-4 text-[#FF4D4D]" fill="currentColor" viewBox="0 0 24 24">
+                <p className="mt-0.5 flex items-center gap-1 text-sm text-muted">
+                  <svg className="h-4 w-4 text-primary" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
                   </svg>
                   {trip.destination}
                 </p>
               )}
               {trip.startDate && (
-                <p className="mt-0.5 text-xs text-[#aaa]">
+                <p className="mt-0.5 text-xs text-muted">
                   {formatDate(trip.startDate)}
                   {trip.durationDays ? ` · ${trip.durationDays} jour${trip.durationDays > 1 ? 's' : ''}` : ''}
                 </p>
@@ -89,24 +89,24 @@ function TripPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-2xl px-4 py-6">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* Generate button — only shown before first generation */}
         {!isGenerated && (
-          <div className="mb-6">
+          <div className="mx-auto mb-6 max-w-2xl">
             <button
               onClick={() => generateMutation.mutate({ tripId })}
               disabled={generateMutation.isPending}
-              className="w-full rounded-2xl bg-[#FF4D4D] px-6 py-4 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+              className="min-h-12 w-full rounded-2xl bg-primary px-6 py-4 text-sm font-bold text-white shadow-lg shadow-primary/25 transition hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.99] disabled:opacity-60"
             >
               {generateMutation.isPending ? '✨ Génération en cours…' : '✨ Générer mon itinéraire'}
             </button>
             {generateMutation.isError && (
-              <p className="mt-2 text-center text-xs text-[#FF4D4D]">
+              <p className="mt-2 text-center text-xs text-primary">
                 {(generateMutation.error as any)?.message ?? 'Erreur lors de la génération.'}
               </p>
             )}
             {!generateMutation.isPending && (
-              <p className="mt-2 text-center text-xs text-[#888]">
+              <p className="mt-2 text-center text-xs text-muted">
                 Organise tes lieux likés en un planning cohérent jour par jour.
               </p>
             )}
@@ -114,14 +114,14 @@ function TripPage() {
             {/* Preview of liked items before generation */}
             {days.length > 0 && days[0].activities.length > 0 && (
               <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#888]">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">
                   {days[0].activities.length} lieu{days[0].activities.length > 1 ? 'x' : ''} liké{days[0].activities.length > 1 ? 's' : ''}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {days[0].activities.map((act) => (
                     <span
                       key={act.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-[#F2EDE8] px-2.5 py-1 text-xs text-[#555]"
+                      className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-xs text-ink-soft"
                     >
                       {categoryMeta(act.category).emoji} {act.title}
                     </span>
@@ -144,7 +144,7 @@ function TripPage() {
                 {({ loading }) => (
                   <button
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-xs font-semibold text-ink-soft transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
                   >
                     {loading ? '⏳ Préparation…' : '📄 Télécharger le PDF'}
                   </button>
@@ -152,7 +152,7 @@ function TripPage() {
               </PDFDownloadLink>
             </div>
 
-            <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-start">
               {days.map((day) => (
                 <DayCard key={day.id} day={day} />
               ))}
@@ -164,7 +164,7 @@ function TripPage() {
         {generateMutation.isPending && (
           <div className="mt-4 rounded-2xl bg-white p-6 text-center shadow-sm">
             <div className="mb-2 text-2xl">✨</div>
-            <p className="text-sm text-[#888]">
+            <p className="text-sm text-muted">
               Analyse de tes préférences et optimisation géographique…
             </p>
           </div>
@@ -186,17 +186,17 @@ function DayCard({ day }: { day: Day }) {
 
   return (
     <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-      <div className="border-b border-[#f0eae3] px-4 py-3">
+      <div className="border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-[#FF4D4D] px-2.5 py-0.5 text-xs font-bold text-white">
+            <span className="rounded-lg bg-primary px-2.5 py-0.5 text-xs font-bold text-white">
               Jour {day.dayIndex}
             </span>
             {day.targetDate && (
-              <span className="text-xs text-[#888]">{formatDate(day.targetDate)}</span>
+              <span className="text-xs text-muted">{formatDate(day.targetDate)}</span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-[#888]">
+          <div className="flex items-center gap-1.5 text-xs text-muted">
             {hotel && <span title="Hébergement">🏨</span>}
             {activities.length > 0 && <span title="Activités">🗺️ ×{activities.length}</span>}
             {restaurants.length > 0 && <span title="Restaurant">🍽️</span>}
@@ -204,12 +204,12 @@ function DayCard({ day }: { day: Day }) {
         </div>
       </div>
 
-      <div className="divide-y divide-[#f5f0ea]">
+      <div className="divide-y divide-border">
         {ordered.map((act, idx) => (
           <ActivityRow key={act.id} activity={act} index={idx} />
         ))}
         {ordered.length === 0 && (
-          <p className="px-4 py-3 text-xs text-[#888]">Aucune activité ce jour.</p>
+          <p className="px-4 py-3 text-xs text-muted">Aucune activité ce jour.</p>
         )}
       </div>
     </div>
@@ -222,7 +222,7 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
 
   return (
     <div className="flex gap-3 px-4 py-3.5">
-      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(255,77,77,.12)] text-[0.65rem] font-bold text-[#FF4D4D]">
+      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[0.65rem] font-bold text-primary">
         {index + 1}
       </div>
 
@@ -243,9 +243,9 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold leading-tight text-[#1a1a1a]">{activity.title}</p>
+          <p className="font-semibold leading-tight text-ink">{activity.title}</p>
           <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-[#555]"
+            className="shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-ink-soft"
             style={{ background: meta.color }}
           >
             {meta.label}
@@ -253,11 +253,11 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
         </div>
 
         {activity.locationName && activity.locationName !== activity.title && (
-          <p className="mt-0.5 text-xs text-[#888]">📍 {activity.locationName}</p>
+          <p className="mt-0.5 text-xs text-muted">📍 {activity.locationName}</p>
         )}
 
         {desc && (
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#999]">{desc}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{desc}</p>
         )}
 
         {activity.sourceUrl && (
@@ -265,7 +265,7 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
             href={activity.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1.5 inline-block text-xs font-medium text-[#FF4D4D] underline decoration-[#FF4D4D]/40 underline-offset-2 hover:decoration-[#FF4D4D]"
+            className="mt-1.5 inline-block text-xs font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
           >
             Voir l'offre ↗
           </a>
@@ -277,9 +277,9 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
 
 function StatusBadge({ status }: { status: string | null }) {
   const styles: Record<string, string> = {
-    draft:     'bg-[#F2EDE8] text-[#888] border-[#ddd]',
-    finalized: 'bg-[rgba(46,204,113,.1)] text-[#27ae60] border-[rgba(46,204,113,.25)]',
-    archived:  'bg-[rgba(255,77,77,.08)] text-[#FF4D4D] border-[rgba(255,77,77,.25)]',
+    draft:     'bg-surface text-ink-soft border-border',
+    finalized: 'bg-accent/10 text-accent border-accent/30',
+    archived:  'bg-primary/10 text-primary-dark border-primary/25',
   }
   const labels: Record<string, string> = { draft: 'Brouillon', finalized: 'Finalisé', archived: 'Archivé' }
   const s = status ?? 'draft'

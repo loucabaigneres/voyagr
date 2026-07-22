@@ -53,13 +53,13 @@ function cleanDesc(desc: string): string {
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  hotel:     { label: 'Hébergement', color: '#FF4D4D' },
-  'activité': { label: 'Activité',    color: '#2ecc71' },
-  restaurant:{ label: 'Restaurant',  color: '#f39c12' },
+  hotel:     { label: 'Hébergement', color: '#FF4E4A' },
+  'activité': { label: 'Activité',    color: '#FF7B28' },
+  restaurant:{ label: 'Restaurant',  color: '#A2101B' },
 }
 
 function categoryInfo(cat: string | null) {
-  return CATEGORY_LABELS[cat ?? ''] ?? { label: cat ?? 'Lieu', color: '#888888' }
+  return CATEGORY_LABELS[cat ?? ''] ?? { label: cat ?? 'Lieu', color: '#858181' }
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -77,18 +77,18 @@ const s = StyleSheet.create({
   header: {
     marginBottom: 28,
     borderBottomWidth: 2,
-    borderBottomColor: '#FF4D4D',
+    borderBottomColor: '#FF4E4A',
     paddingBottom: 16,
   },
   title: {
     fontSize: 22,
     fontFamily: 'Helvetica-Bold',
-    color: '#1a1a1a',
+    color: '#060606',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 10,
-    color: '#666666',
+    color: '#3F3E3E',
     marginBottom: 2,
   },
 
@@ -99,7 +99,7 @@ const s = StyleSheet.create({
   dayHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2EDE8',
+    backgroundColor: '#F2F0EF',
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -108,12 +108,12 @@ const s = StyleSheet.create({
   dayLabel: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    color: '#FF4D4D',
+    color: '#FF4E4A',
     marginRight: 8,
   },
   dayDate: {
     fontSize: 10,
-    color: '#888888',
+    color: '#858181',
   },
 
   // Activity row
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   activityTitle: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    color: '#1a1a1a',
+    color: '#060606',
     flex: 1,
     marginRight: 8,
   },
@@ -154,24 +154,24 @@ const s = StyleSheet.create({
   },
   locationName: {
     fontSize: 9,
-    color: '#888888',
+    color: '#858181',
     marginBottom: 2,
   },
   coords: {
     fontSize: 8,
-    color: '#aaaaaa',
+    color: '#858181',
     marginBottom: 3,
   },
   description: {
     fontSize: 9,
-    color: '#555555',
+    color: '#3F3E3E',
     lineHeight: 1.5,
   },
 
   // Divider between activities
   divider: {
     borderBottomWidth: 0.5,
-    borderBottomColor: '#eeeeee',
+    borderBottomColor: '#E5DFDD',
     marginBottom: 10,
   },
 
@@ -186,7 +186,7 @@ const s = StyleSheet.create({
   },
   footerText: {
     fontSize: 8,
-    color: '#bbbbbb',
+    color: '#858181',
   },
 })
 

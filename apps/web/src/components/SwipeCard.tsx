@@ -40,7 +40,7 @@ export function SwipeCard({ card, onSwipe, isFront }: SwipeCardProps) {
 
   return (
     <motion.div
-      className="absolute w-full h-[70vh] max-h-150 max-w-sm rounded-3xl overflow-hidden shadow-xl bg-gray-200 origin-bottom"
+      className="absolute w-full h-[70vh] max-h-150 max-w-sm rounded-3xl overflow-hidden shadow-xl bg-border origin-bottom"
       // Configuration de la physique
       style={{ x, rotate }}
       drag={isFront ? "x" : false} // On ne peut glisser que la première carte
@@ -53,18 +53,18 @@ export function SwipeCard({ card, onSwipe, isFront }: SwipeCardProps) {
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
       {/* L'image de fond */}
-      <img 
-        src={card.mainMediaUrl} 
-        alt={card.locationName || 'Destination inconnue'} 
+      <img
+        src={card.mainMediaUrl}
+        alt={card.locationName || 'Destination inconnue'}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
       />
 
       {/* Les indicateurs visuels (LIKE / NOPE) */}
-      <motion.div style={{ opacity: opacityLike }} className="absolute top-8 left-8 border-4 border-green-500 rounded-lg px-4 py-1">
-        <span className="text-3xl font-bold text-green-500 tracking-wider transform -rotate-12">LIKE</span>
+      <motion.div style={{ opacity: opacityLike }} className="absolute top-8 left-8 rounded-lg border-4 border-primary px-4 py-1">
+        <span className="-rotate-12 transform text-3xl font-bold tracking-wider text-primary drop-shadow">LIKE</span>
       </motion.div>
-      <motion.div style={{ opacity: opacityNope }} className="absolute top-8 right-8 border-4 border-red-500 rounded-lg px-4 py-1">
-        <span className="text-3xl font-bold text-red-500 tracking-wider transform rotate-12">NOPE</span>
+      <motion.div style={{ opacity: opacityNope }} className="absolute top-8 right-8 rounded-lg border-4 border-white px-4 py-1">
+        <span className="rotate-12 transform text-3xl font-bold tracking-wider text-white drop-shadow">NOPE</span>
       </motion.div>
 
       {/* Le dégradé sombre en bas pour rendre le texte lisible */}
