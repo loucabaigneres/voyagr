@@ -5,6 +5,7 @@ import { fastifyTRPCPlugin, FastifyTRPCPluginOptions } from '@trpc/server/adapte
 import { fromNodeHeaders } from 'better-auth/node';
 import Fastify from 'fastify';
 import { auth } from './lib/auth.js';
+import { registerImageProxy } from './routes/image-proxy.js';
 import { createContext } from './trpc/context.js';
 import { AppRouter, appRouter } from './trpc/router.js';
 
@@ -56,6 +57,9 @@ server.route({
     }
   },
 });
+
+// Serves catalog images without CORS restrictions, for the PDF renderer.
+registerImageProxy(server);
 
 // Register the tRPC plugin with the Fastify server
 await server.register(fastifyTRPCPlugin, {

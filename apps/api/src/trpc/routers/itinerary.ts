@@ -1,85 +1,18 @@
 import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
-import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Context } from '../context.js';
 
 import { activity, discoveryContent, trip, tripDay } from '../../lib/tables.js';
+import { calcNumDays, geoDistItem, parseWkt, planItinerary } from '../../lib/itinerary/planner.js';
+import type { AveragePrice, GeoPoint, Intensity, ItinItem } from '../../lib/itinerary/planner.js';
 import { publicProcedure } from '../init.js';
 import { getCatalog } from './discovery.js';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type ItinItem = {
-  activityId: string;
-  discoveryContentId: string | null;
-  title: string;
-  locationName: string | null;
-  description: string | null;
-  coordinates: string | null;
-  lat: number | null;
-  lng: number | null;
-  mainMediaUrl: string | null;
-  category: string;
-  price: string | null;
-};
-
-// ─── Budget / pace helpers ──────────────────────────────────────────────────────
-
-const PRICE_TARGET_RANK: Record<string, number> = { budget: 1, mid: 2, premium: 3 };
-const INTENSITY_ACTS_PER_DAY: Record<string, number> = { chill: 1, balanced: 2, intense: 3 };
-
-/** `""`, `"$"`, `"$$"`, ... -> 0, 1, 2, ... Missing price data is treated as neutral. */
-function priceRank(price: string | null): number | null {
-  if (!price) return null;
-  return price.length;
-}
-
-/** Distance-equivalent penalty (km) for how far an item's price tier is from the trip's target. */
-function pricePenalty(price: string | null, targetRank: number): number {
-  const rank = priceRank(price);
-  if (rank == null) return 0;
-  return Math.abs(rank - targetRank) * 8;
-}
-
-// ─── Geo helpers ──────────────────────────────────────────────────────────────
-
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(a));
-}
-
-export function parseWkt(wkt: string | null): { lat: number; lng: number } | null {
-  if (!wkt) return null;
-  const m = wkt.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
-  if (!m) return null;
-  return { lng: parseFloat(m[1]), lat: parseFloat(m[2]) };
-}
-
-function geoDistItem(
-  item: { lat: number | null; lng: number | null },
-  lat: number,
-  lng: number,
-): number {
-  if (item.lat == null || item.lng == null) return 0;
-  return haversine(item.lat, item.lng, lat, lng);
-}
-
-/** Geo distance plus a penalty for drifting away from the trip's target budget tier. */
-function scoreItem(item: ItinItem, lat: number, lng: number, targetPriceRank: number): number {
-  return geoDistItem(item, lat, lng) + pricePenalty(item.price, targetPriceRank);
-}
-
-function calcNumDays(durationDays: number | null): number {
-  if (!durationDays) return 3;
-  return Math.max(1, Math.min(durationDays, 14));
-}
+/** `trip_day` rows outside the planning itself. */
+const LIKED_DAY_INDEX = 0;
+const ALTERNATIVE_HOTELS_DAY_INDEX = -1;
 
 // ─── DB fetch ─────────────────────────────────────────────────────────────────
 
@@ -87,8 +20,7 @@ async function fetchNearbyFromDb(
   db: Context['db'],
   category: string,
   city: string,
-  lat: number,
-  lng: number,
+  anchor: GeoPoint,
   limit: number,
 ): Promise<ItinItem[]> {
   const rows = await db
@@ -100,6 +32,7 @@ async function fetchNearbyFromDb(
       mainMediaUrl: discoveryContent.mainMediaUrl,
       coordinates: discoveryContent.coordinates,
       price: sql<string | null>`${discoveryContent.tags}->>'price'`,
+      subcategory: sql<string[] | null>`${discoveryContent.tags}->'subcategory'`,
     })
     .from(discoveryContent)
     .where(
@@ -120,6 +53,7 @@ async function fetchNearbyFromDb(
       mainMediaUrl: string | null;
       coordinates: string | null;
       price: string | null;
+      subcategory: string[] | null;
     }>
   )
     .map((r) => {
@@ -136,9 +70,11 @@ async function fetchNearbyFromDb(
         mainMediaUrl: r.mainMediaUrl,
         category,
         price: r.price,
+        subcategory: Array.isArray(r.subcategory) ? r.subcategory : null,
+        liked: false,
       };
     })
-    .sort((a, b) => geoDistItem(a, lat, lng) - geoDistItem(b, lat, lng))
+    .sort((a, b) => geoDistItem(a, anchor) - geoDistItem(b, anchor))
     .slice(0, limit);
 }
 
@@ -250,30 +186,31 @@ export const itineraryRouter = {
       const [tripRow] = await ctx.db.select().from(trip).where(eq(trip.id, input.tripId));
       if (!tripRow) throw new TRPCError({ code: 'NOT_FOUND', message: 'Trip introuvable.' });
 
-      const existingDays = await ctx.db
+      // Only day 0 holds the places the user actually liked while swiping. Days
+      // 1..N are a previous generation and must not be mistaken for preferences.
+      const [likedDay] = await ctx.db
         .select({ id: tripDay.id })
         .from(tripDay)
-        .where(eq(tripDay.tripId, input.tripId));
-      const dayIds = existingDays.map((d) => d.id);
+        .where(and(eq(tripDay.tripId, input.tripId), eq(tripDay.dayIndex, LIKED_DAY_INDEX)));
 
-      const rawLiked =
-        dayIds.length > 0
-          ? await ctx.db
-              .select({
-                activityId: activity.id,
-                discoveryContentId: activity.discoveryContentId,
-                title: activity.title,
-                locationName: activity.locationName,
-                description: activity.description,
-                coordinates: activity.coordinates,
-                mainMediaUrl: discoveryContent.mainMediaUrl,
-                dbCategory: sql<string | null>`${discoveryContent.tags}->>'category'`,
-                dbPrice: sql<string | null>`${discoveryContent.tags}->>'price'`,
-              })
-              .from(activity)
-              .leftJoin(discoveryContent, eq(activity.discoveryContentId, discoveryContent.id))
-              .where(inArray(activity.tripDayId, dayIds))
-          : [];
+      const rawLiked = likedDay
+        ? await ctx.db
+            .select({
+              activityId: activity.id,
+              discoveryContentId: activity.discoveryContentId,
+              title: activity.title,
+              locationName: activity.locationName,
+              description: activity.description,
+              coordinates: activity.coordinates,
+              mainMediaUrl: discoveryContent.mainMediaUrl,
+              dbCategory: sql<string | null>`${discoveryContent.tags}->>'category'`,
+              dbPrice: sql<string | null>`${discoveryContent.tags}->>'price'`,
+              dbSubcategory: sql<string[] | null>`${discoveryContent.tags}->'subcategory'`,
+            })
+            .from(activity)
+            .leftJoin(discoveryContent, eq(activity.discoveryContentId, discoveryContent.id))
+            .where(eq(activity.tripDayId, likedDay.id))
+        : [];
 
       const catalog = await getCatalog(ctx.db);
       const tripCity = tripRow.destination ?? '';
@@ -289,7 +226,9 @@ export const itineraryRouter = {
         const bucket = catalogByCategory.get(i.tags.category) ?? [];
         bucket.push({
           activityId: `catalog:${i.id}`,
-          discoveryContentId: null,
+          // The catalog is read straight from `discovery_content`, so this is a
+          // real row id — keeping it lets the UI resolve the category and media.
+          discoveryContentId: i.id,
           title: i.locationName ?? 'Lieu',
           locationName: i.locationName,
           description: i.description,
@@ -299,6 +238,8 @@ export const itineraryRouter = {
           mainMediaUrl: i.mainMediaUrl,
           category: i.tags.category,
           price: (i.tags.price as string | undefined) ?? null,
+          subcategory: i.tags.subcategory ?? null,
+          liked: false,
         });
         catalogByCategory.set(i.tags.category, bucket);
       }
@@ -317,16 +258,19 @@ export const itineraryRouter = {
           mainMediaUrl: r.mainMediaUrl,
           category: r.dbCategory ?? catByCoords.get(r.coordinates ?? '') ?? 'activité',
           price: r.dbPrice,
+          subcategory: Array.isArray(r.dbSubcategory) ? r.dbSubcategory : null,
+          liked: true,
         };
       });
 
       // Compute city center from liked items, fall back to catalog
       const withCoords = liked.filter((i) => i.lat != null && i.lng != null);
-      let centerLat: number;
-      let centerLng: number;
+      let center: GeoPoint;
       if (withCoords.length > 0) {
-        centerLat = withCoords.reduce((s, i) => s + i.lat!, 0) / withCoords.length;
-        centerLng = withCoords.reduce((s, i) => s + i.lng!, 0) / withCoords.length;
+        center = {
+          lat: withCoords.reduce((s, i) => s + i.lat!, 0) / withCoords.length,
+          lng: withCoords.reduce((s, i) => s + i.lng!, 0) / withCoords.length,
+        };
       } else {
         const fallbackPts = [...catalogByCategory.values()]
           .flat()
@@ -338,23 +282,25 @@ export const itineraryRouter = {
             message: `Aucune donnée trouvée pour la destination "${tripRow.destination}".`,
           });
         }
-        centerLat = fallbackPts.reduce((s, i) => s + i.lat!, 0) / fallbackPts.length;
-        centerLng = fallbackPts.reduce((s, i) => s + i.lng!, 0) / fallbackPts.length;
+        center = {
+          lat: fallbackPts.reduce((s, i) => s + i.lat!, 0) / fallbackPts.length,
+          lng: fallbackPts.reduce((s, i) => s + i.lng!, 0) / fallbackPts.length,
+        };
       }
 
       for (const pool of catalogByCategory.values()) {
-        pool.sort(
-          (a, b) => geoDistItem(a, centerLat, centerLng) - geoDistItem(b, centerLat, centerLng),
-        );
+        pool.sort((a, b) => geoDistItem(a, center) - geoDistItem(b, center));
       }
 
       const likedByCategory = (cat: string) => liked.filter((i) => i.category === cat);
       const numDays = calcNumDays(tripRow.durationDays);
 
       const [dbActivities, dbHotels, dbRestaurants] = await Promise.all([
-        fetchNearbyFromDb(ctx.db, 'activité', tripCity, centerLat, centerLng, 100),
-        fetchNearbyFromDb(ctx.db, 'hotel', tripCity, centerLat, centerLng, numDays * 3),
-        fetchNearbyFromDb(ctx.db, 'restaurant', tripCity, centerLat, centerLng, numDays * 3),
+        fetchNearbyFromDb(ctx.db, 'activité', tripCity, center, 100),
+        // The planner keeps one hotel and offers a few alternatives, so a
+        // handful of candidates is enough regardless of the trip length.
+        fetchNearbyFromDb(ctx.db, 'hotel', tripCity, center, 20),
+        fetchNearbyFromDb(ctx.db, 'restaurant', tripCity, center, 40),
       ]);
 
       const allActivities = buildPool(
@@ -373,116 +319,170 @@ export const itineraryRouter = {
         catalogByCategory.get('restaurant') ?? [],
       );
 
-      const targetPriceRank = PRICE_TARGET_RANK[tripRow.averagePrice ?? 'mid'] ?? 2;
-      const baseActsPerDay = INTENSITY_ACTS_PER_DAY[tripRow.intensity ?? 'balanced'] ?? 2;
-      const actsPerDay = Math.min(baseActsPerDay, Math.ceil(allActivities.length / numDays));
+      const { days: dayPlans, alternativeHotels } = planItinerary({
+        numDays,
+        intensity: (tripRow.intensity as Intensity | null) ?? null,
+        averagePrice: (tripRow.averagePrice as AveragePrice | null) ?? null,
+        interests: Array.isArray(tripRow.interests) ? (tripRow.interests as string[]) : [],
+        center,
+        hotels: allHotels,
+        activities: allActivities,
+        restaurants: allRestaurants,
+      });
 
-      const usedIds = new Set<string>();
-      const addItem = (item: ItinItem, plan: ItinItem[]) => {
-        plan.push(item);
-        usedIds.add(item.activityId);
-        if (item.discoveryContentId) usedIds.add(`db:${item.discoveryContentId}`);
-      };
-
-      const pickFrom = (
-        pool: ItinItem[],
-        anchorLat: number,
-        anchorLng: number,
-      ): ItinItem | undefined =>
-        pool
-          .filter((i) => !usedIds.has(i.activityId))
-          .sort(
-            (a, b) =>
-              scoreItem(a, anchorLat, anchorLng, targetPriceRank) -
-              scoreItem(b, anchorLat, anchorLng, targetPriceRank),
-          )[0];
-
-      const dayPlans: ItinItem[][] = [];
-
-      // Group consecutive days into hotel "stays" of a few days each instead
-      // of swapping hotels every single day.
-      const MIN_STAY_DAYS = 1;
-      const MAX_STAY_DAYS = 4;
-      let dayCursor = 0;
-      while (dayCursor < numDays) {
-        const remaining = numDays - dayCursor;
-        const stayLength =
-          remaining <= MIN_STAY_DAYS
-            ? remaining
-            : Math.min(
-                remaining,
-                MIN_STAY_DAYS + Math.floor(Math.random() * (MAX_STAY_DAYS - MIN_STAY_DAYS + 1)),
-              );
-
-        const hotel = pickFrom(allHotels, centerLat, centerLng);
-
-        for (let i = 0; i < stayLength; i++) {
-          const plan: ItinItem[] = [];
-          if (hotel) addItem(hotel, plan);
-
-          const anchorLat = hotel?.lat ?? centerLat;
-          const anchorLng = hotel?.lng ?? centerLng;
-
-          const dayActs = allActivities
-            .filter((a) => !usedIds.has(a.activityId))
-            .sort(
-              (a, b) =>
-                scoreItem(a, anchorLat, anchorLng, targetPriceRank) -
-                scoreItem(b, anchorLat, anchorLng, targetPriceRank),
-            )
-            .slice(0, actsPerDay);
-          for (const act of dayActs) addItem(act, plan);
-
-          const resto = pickFrom(allRestaurants, anchorLat, anchorLng);
-          if (resto) addItem(resto, plan);
-
-          dayPlans.push(plan);
-        }
-
-        dayCursor += stayLength;
-      }
-
-      // Persist — delete old days/activities then insert new ones
-      if (dayIds.length > 0) {
-        await ctx.db.delete(activity).where(inArray(activity.tripDayId, dayIds));
-        await ctx.db.delete(tripDay).where(eq(tripDay.tripId, input.tripId));
-      }
-
+      // Persist — replace the planning, keep the liked-places bucket (day 0).
       const startDate = tripRow.startDate ? new Date(tripRow.startDate) : null;
-      for (let i = 0; i < dayPlans.length; i++) {
-        const plan = dayPlans[i];
-        let targetDate: string | null = null;
-        if (startDate) {
-          const d = new Date(startDate);
-          d.setDate(d.getDate() + i);
-          targetDate = d.toISOString().split('T')[0]!;
+      const dayRows = [
+        ...(alternativeHotels.length > 0
+          ? [
+              {
+                dayIndex: ALTERNATIVE_HOTELS_DAY_INDEX,
+                summary: 'Hôtels alternatifs',
+                targetDate: null as string | null,
+                plan: alternativeHotels,
+              },
+            ]
+          : []),
+        ...dayPlans.map((plan, i) => {
+          let targetDate: string | null = null;
+          if (startDate) {
+            const d = new Date(startDate);
+            d.setDate(d.getDate() + i);
+            targetDate = d.toISOString().split('T')[0]!;
+          }
+          return { dayIndex: i + 1, summary: `Jour ${i + 1}`, targetDate, plan };
+        }),
+      ];
+
+      await ctx.db.transaction(async (tx) => {
+        const staleDays = await tx
+          .select({ id: tripDay.id })
+          .from(tripDay)
+          .where(and(eq(tripDay.tripId, input.tripId), ne(tripDay.dayIndex, LIKED_DAY_INDEX)));
+        const staleIds = staleDays.map((d) => d.id);
+
+        if (staleIds.length > 0) {
+          await tx.delete(activity).where(inArray(activity.tripDayId, staleIds));
+          await tx.delete(tripDay).where(inArray(tripDay.id, staleIds));
         }
 
-        const [day] = await ctx.db
+        const inserted = await tx
           .insert(tripDay)
-          .values({
-            tripId: input.tripId,
-            dayIndex: i + 1,
-            summary: `Jour ${i + 1}`,
-            targetDate,
-          })
-          .returning({ id: tripDay.id });
-
-        if (plan.length > 0) {
-          await ctx.db.insert(activity).values(
-            plan.map((item, j) => ({
-              tripDayId: day.id,
-              discoveryContentId: item.discoveryContentId ?? undefined,
-              title: item.title,
-              locationName: item.locationName,
-              description: item.description ?? undefined,
-              coordinates: item.coordinates ?? undefined,
-              orderIndex: j,
+          .values(
+            dayRows.map(({ dayIndex, summary, targetDate }) => ({
+              tripId: input.tripId,
+              dayIndex,
+              summary,
+              targetDate,
             })),
-          );
-        }
-      }
+          )
+          .returning({ id: tripDay.id, dayIndex: tripDay.dayIndex });
+
+        const dayIdByIndex = new Map(inserted.map((d) => [d.dayIndex, d.id]));
+        const activityRows = dayRows.flatMap(({ dayIndex, plan }) =>
+          plan.map((item, j) => ({
+            tripDayId: dayIdByIndex.get(dayIndex)!,
+            discoveryContentId: item.discoveryContentId ?? undefined,
+            title: item.title,
+            locationName: item.locationName,
+            description: item.description ?? undefined,
+            coordinates: item.coordinates ?? undefined,
+            orderIndex: j,
+          })),
+        );
+
+        if (activityRows.length > 0) await tx.insert(activity).values(activityRows);
+      });
 
       return { tripId: input.tripId, numDays: dayPlans.length };
+    }),
+
+  /**
+   * Swaps the itinerary's hotel with one of the alternatives.
+   *
+   * The two places trade positions: the picked alternative becomes the hotel of
+   * every planned day, and the outgoing hotel takes its slot in the alternatives
+   * list, so the choice stays reversible.
+   */
+  chooseHotel: publicProcedure
+    .input(z.object({ tripId: z.string().uuid(), activityId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const days = await ctx.db
+        .select({ id: tripDay.id, dayIndex: tripDay.dayIndex })
+        .from(tripDay)
+        .where(eq(tripDay.tripId, input.tripId));
+
+      const alternativesDayId = days.find((d) => d.dayIndex === ALTERNATIVE_HOTELS_DAY_INDEX)?.id;
+      const planningDayIds = days.filter((d) => d.dayIndex > 0).map((d) => d.id);
+
+      if (!alternativesDayId || planningDayIds.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: "Ce voyage n'a pas d'itinéraire généré.",
+        });
+      }
+
+      // Scoping the lookup to this trip's alternatives day is what stops an
+      // arbitrary activity id from being written into the planning.
+      const [chosen] = await ctx.db
+        .select()
+        .from(activity)
+        .where(and(eq(activity.id, input.activityId), eq(activity.tripDayId, alternativesDayId)));
+
+      if (!chosen) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Cet hôtel ne fait pas partie des alternatives proposées.',
+        });
+      }
+
+      const currentHotels = await ctx.db
+        .select({
+          id: activity.id,
+          discoveryContentId: activity.discoveryContentId,
+          title: activity.title,
+          locationName: activity.locationName,
+          description: activity.description,
+          coordinates: activity.coordinates,
+        })
+        .from(activity)
+        .leftJoin(discoveryContent, eq(activity.discoveryContentId, discoveryContent.id))
+        .where(
+          and(
+            inArray(activity.tripDayId, planningDayIds),
+            sql`${discoveryContent.tags}->>'category' = 'hotel'`,
+          ),
+        );
+
+      const outgoing = currentHotels[0];
+      if (!outgoing) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: "L'itinéraire ne contient aucun hébergement à remplacer.",
+        });
+      }
+
+      const fieldsOf = (row: typeof outgoing) => ({
+        discoveryContentId: row.discoveryContentId,
+        title: row.title,
+        locationName: row.locationName,
+        description: row.description,
+        coordinates: row.coordinates,
+      });
+
+      await ctx.db.transaction(async (tx) => {
+        await tx
+          .update(activity)
+          .set(fieldsOf(chosen))
+          .where(
+            inArray(
+              activity.id,
+              currentHotels.map((h) => h.id),
+            ),
+          );
+        await tx.update(activity).set(fieldsOf(outgoing)).where(eq(activity.id, chosen.id));
+      });
+
+      return { tripId: input.tripId, hotelTitle: chosen.title };
     }),
 } satisfies TRPCRouterRecord;
