@@ -422,7 +422,6 @@ function DiscoveryPage() {
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation()
-                            const images = [item.mainMediaUrl, ...(item.carousselUrls ?? [])].filter((url): url is string => Boolean(url))
                             setActiveImageIndexById((prev) => {
                               const currentIndex = prev[item.id] ?? 0
                               const nextIndex = Math.max(0, currentIndex - 1)
