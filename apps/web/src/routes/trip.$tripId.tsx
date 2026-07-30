@@ -1,6 +1,7 @@
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import type { inferRouterOutputs } from '@trpc/server'
 import type { AppRouter } from '../../../api/src/trpc/router'
 import { TripPdfDocument } from '../components/TripPdf'
@@ -34,6 +35,12 @@ function TripPage() {
     }),
   )
 
+  const chooseHotelMutation = useMutation(
+    trpc.discovery.chooseHotel.mutationOptions({
+      onSuccess: () => tripQuery.refetch(),
+    }),
+  )
+
   if (tripQuery.isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8]">
@@ -54,6 +61,12 @@ function TripPage() {
   }
 
   const { trip, days, isGenerated } = tripQuery.data
+
+  // Day 0 holds the places liked while swiping and day -1 the alternative
+  // hotels; neither belongs in the day-by-day planning.
+  const itineraryDays = days.filter((d) => d.dayIndex > 0)
+  const likedDay = days.find((d) => d.dayIndex === 0)
+  const alternativeHotels = days.find((d) => d.dayIndex === -1)?.activities ?? []
 
   return (
     <div className="min-h-screen bg-[#F2EDE8] text-[#1a1a1a]">
@@ -112,13 +125,13 @@ function TripPage() {
             )}
 
             {/* Preview of liked items before generation */}
-            {days.length > 0 && days[0].activities.length > 0 && (
+            {likedDay && likedDay.activities.length > 0 && (
               <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#888]">
-                  {days[0].activities.length} lieu{days[0].activities.length > 1 ? 'x' : ''} liké{days[0].activities.length > 1 ? 's' : ''}
+                  {likedDay.activities.length} lieu{likedDay.activities.length > 1 ? 'x' : ''} liké{likedDay.activities.length > 1 ? 's' : ''}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {days[0].activities.map((act) => (
+                  {likedDay.activities.map((act) => (
                     <span
                       key={act.id}
                       className="inline-flex items-center gap-1 rounded-full bg-[#F2EDE8] px-2.5 py-1 text-xs text-[#555]"
@@ -153,10 +166,52 @@ function TripPage() {
             </div>
 
             <div className="flex flex-col gap-5">
-              {days.map((day) => (
+              {itineraryDays.map((day) => (
                 <DayCard key={day.id} day={day} />
               ))}
             </div>
+
+            {alternativeHotels.length > 0 && (
+              <div className="mt-5 overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="border-b border-[#f0eae3] px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#888]">
+                    🏨 Autres hôtels à proximité
+                  </p>
+                  <p className="mt-1 text-xs text-[#aaa]">
+                    Choisis-en un pour remplacer l'hébergement de ton itinéraire.
+                  </p>
+                </div>
+                <div className="divide-y divide-[#f5f0ea]">
+                  {alternativeHotels.map((hotel, idx) => (
+                    <ActivityRow
+                      key={hotel.id}
+                      activity={hotel}
+                      index={idx}
+                      action={
+                        <button
+                          onClick={() =>
+                            chooseHotelMutation.mutate({ tripId, activityId: hotel.id })
+                          }
+                          disabled={chooseHotelMutation.isPending}
+                          className="rounded-lg border border-[#FF4D4D] px-3 py-1.5 text-xs font-semibold text-[#FF4D4D] transition hover:bg-[#FF4D4D] hover:text-white disabled:opacity-50"
+                        >
+                          {chooseHotelMutation.isPending &&
+                          chooseHotelMutation.variables?.activityId === hotel.id
+                            ? 'Changement…'
+                            : 'Choisir cet hôtel'}
+                        </button>
+                      }
+                    />
+                  ))}
+                </div>
+                {chooseHotelMutation.isError && (
+                  <p className="px-4 py-3 text-xs text-[#FF4D4D]">
+                    {(chooseHotelMutation.error as { message?: string })?.message ??
+                      "Impossible de changer d'hôtel."}
+                  </p>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -175,48 +230,77 @@ function TripPage() {
 }
 
 function DayCard({ day }: { day: Day }) {
-  const hotel = day.activities.find((a) => a.category === 'hotel')
+  const [isOpen, setIsOpen] = useState(true)
+
   const activities = day.activities.filter((a) => a.category === 'activité')
   const restaurants = day.activities.filter((a) => a.category === 'restaurant')
-  const others = day.activities.filter(
-    (a) => a.category !== 'hotel' && a.category !== 'activité' && a.category !== 'restaurant',
-  )
 
-  const ordered = [...(hotel ? [hotel] : []), ...activities, ...restaurants, ...others]
+  // The planner emits each day as a real route (hotel → matin → déjeuner →
+  // après-midi → dîner), so `orderIndex` is the order to display.
+  const ordered = [...day.activities].sort((a, b) => a.orderIndex - b.orderIndex)
+
+  const summary = [
+    activities.length > 0 && `${activities.length} activité${activities.length > 1 ? 's' : ''}`,
+    restaurants.length > 0 && `${restaurants.length} restaurant${restaurants.length > 1 ? 's' : ''}`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-      <div className="border-b border-[#f0eae3] px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-[#FF4D4D] px-2.5 py-0.5 text-xs font-bold text-white">
-              Jour {day.dayIndex}
-            </span>
-            {day.targetDate && (
-              <span className="text-xs text-[#888]">{formatDate(day.targetDate)}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-[#888]">
-            {hotel && <span title="Hébergement">🏨</span>}
-            {activities.length > 0 && <span title="Activités">🗺️ ×{activities.length}</span>}
-            {restaurants.length > 0 && <span title="Restaurant">🍽️</span>}
-          </div>
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-[#faf7f4]"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 rounded-lg bg-[#FF4D4D] px-2.5 py-0.5 text-xs font-bold text-white">
+            Jour {day.dayIndex}
+          </span>
+          {day.targetDate && (
+            <span className="shrink-0 text-xs text-[#888]">{formatDate(day.targetDate)}</span>
+          )}
         </div>
-      </div>
 
-      <div className="divide-y divide-[#f5f0ea]">
-        {ordered.map((act, idx) => (
-          <ActivityRow key={act.id} activity={act} index={idx} />
-        ))}
-        {ordered.length === 0 && (
-          <p className="px-4 py-3 text-xs text-[#888]">Aucune activité ce jour.</p>
-        )}
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {summary && <span className="text-xs text-[#aaa]">{summary}</span>}
+          <svg
+            className={`h-4 w-4 text-[#bbb] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="divide-y divide-[#f5f0ea] border-t border-[#f0eae3]">
+          {ordered.map((act, idx) => (
+            <ActivityRow key={act.id} activity={act} index={idx} />
+          ))}
+          {ordered.length === 0 && (
+            <p className="px-4 py-3 text-xs text-[#888]">Aucune activité ce jour.</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-function ActivityRow({ activity, index }: { activity: Activity; index: number }) {
+function ActivityRow({
+  activity,
+  index,
+  action,
+}: {
+  activity: Activity
+  index: number
+  /** Optional control rendered under the description (e.g. "choose this hotel"). */
+  action?: React.ReactNode
+}) {
   const meta = categoryMeta(activity.category)
   const desc = activity.description ? cleanDesc(activity.description) : null
 
@@ -270,6 +354,8 @@ function ActivityRow({ activity, index }: { activity: Activity; index: number })
             Voir l'offre ↗
           </a>
         )}
+
+        {action && <div className="mt-2">{action}</div>}
       </div>
     </div>
   )
