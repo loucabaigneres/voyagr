@@ -1,9 +1,11 @@
 import { PDFDownloadLink } from '@react-pdf/renderer'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { inferRouterOutputs } from '@trpc/server'
+import { useEffect, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
 import { TripPdfDocument } from '../components/TripPdf'
+import { authClient } from '../lib/auth-client'
 import { trpc } from '../lib/trpc.js'
 
 export const Route = createFileRoute('/trip/$tripId')({ component: TripPage })
@@ -25,6 +27,11 @@ function categoryMeta(cat: string | null) {
 
 function TripPage() {
   const { tripId } = Route.useParams()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { data: session } = authClient.useSession()
+
+  const [showSavedBanner, setShowSavedBanner] = useState(false)
 
   const tripQuery = useQuery(trpc.discovery.getTrip.queryOptions({ tripId }))
 
@@ -34,10 +41,33 @@ function TripPage() {
     }),
   )
 
+  const { mutate: saveToProfile, isPending: isSavingTrip } = useMutation(
+    trpc.user.saveTripToAccount.mutationOptions({
+      onSuccess: () => {
+        tripQuery.refetch()
+        queryClient.invalidateQueries(trpc.user.getProfile.queryFilter())
+        queryClient.invalidateQueries(trpc.user.getTrips.queryFilter())
+        setShowSavedBanner(true)
+        setTimeout(() => setShowSavedBanner(false), 5000)
+      },
+    }),
+  )
+
+  useEffect(() => {
+    if (
+      session?.user &&
+      tripQuery.data?.trip &&
+      tripQuery.data.trip.userId !== session.user.id &&
+      !isSavingTrip
+    ) {
+      saveToProfile({ tripId })
+    }
+  }, [session?.user, tripQuery.data?.trip, tripId, saveToProfile, isSavingTrip])
+
   if (tripQuery.isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8]">
-        <div className="text-sm text-[#888]">Chargement…</div>
+        <div className="text-sm font-medium text-[#888]">Chargement…</div>
       </div>
     )
   }
@@ -54,18 +84,33 @@ function TripPage() {
   }
 
   const { trip, days, isGenerated } = tripQuery.data
+  const isOwner = session?.user && trip.userId === session.user.id
+  const isFinalized = trip.status === 'finalized'
+
+  const handleSaveTrip = () => {
+    if (!session?.user) {
+      navigate({
+        to: '/login',
+        search: { redirect: `/trip/${tripId}` },
+      })
+      return
+    }
+    saveToProfile({ tripId })
+  }
 
   return (
     <div className="min-h-screen bg-[#F2EDE8] text-[#1a1a1a]">
       {/* Header */}
       <div className="border-b border-[#e5ded6] bg-white">
         <div className="mx-auto max-w-2xl px-4 py-5">
-          <Link
-            to="/discovery"
-            className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#888] hover:text-[#FF4D4D]"
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#888] hover:text-[#FF4D4D] cursor-pointer"
           >
             ← Retour
-          </Link>
+          </button>
+
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-extrabold">{trip.title ?? 'Mon voyage'}</h1>
@@ -84,19 +129,59 @@ function TripPage() {
                 </p>
               )}
             </div>
-            <StatusBadge status={trip.status} />
+
+            {/* Actions Statut et Sauvegarde */}
+            <div className="flex flex-col items-end gap-2">
+              <StatusBadge status={trip.status} />
+
+              {!isFinalized || !isOwner ? (
+                <button
+                  type="button"
+                  onClick={handleSaveTrip}
+                  disabled={isSavingTrip}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FF4D4D] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-red-500/20 hover:brightness-105 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingTrip
+                    ? 'Enregistrement…'
+                    : session?.user
+                      ? '💾 Enregistrer dans mon profil'
+                      : '🔒 Se connecter pour enregistrer'}
+                </button>
+              ) : (
+                <span className="text-[0.7rem] font-semibold text-[#27ae60]">
+                  ✓ Sauvegardé dans ton profil
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-2xl px-4 py-6">
-        {/* Generate button — only shown before first generation */}
+        {/* Notification de confirmation */}
+        {showSavedBanner && (
+          <div className="mb-6 flex items-center justify-between rounded-2xl bg-[#e8f8f0] border border-[#2ecc71]/30 p-4 text-sm font-semibold text-[#27ae60] shadow-sm">
+            <div className="flex items-center gap-2">
+              <span>🎉</span>
+              <span>Te voilà connecté ! Ton voyage a été enregistré dans ton profil.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSavedBanner(false)}
+              className="text-xs text-[#27ae60] hover:underline cursor-pointer"
+            >
+              Fermer
+            </button>
+          </div>
+        )}
+
+        {/* Bouton de génération */}
         {!isGenerated && (
           <div className="mb-6">
             <button
               onClick={() => generateMutation.mutate({ tripId })}
               disabled={generateMutation.isPending}
-              className="w-full rounded-2xl bg-[#FF4D4D] px-6 py-4 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-2xl bg-[#FF4D4D] px-6 py-4 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
               {generateMutation.isPending ? '✨ Génération en cours…' : '✨ Générer mon itinéraire'}
             </button>
@@ -111,7 +196,6 @@ function TripPage() {
               </p>
             )}
 
-            {/* Preview of liked items before generation */}
             {days.length > 0 && days[0].activities.length > 0 && (
               <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#888]">
@@ -132,10 +216,9 @@ function TripPage() {
           </div>
         )}
 
-        {/* Itinerary days */}
+        {/* Liste des jours d'itinéraire */}
         {isGenerated && (
           <>
-            {/* PDF download button */}
             <div className="mb-4 flex justify-end">
               <PDFDownloadLink
                 document={<TripPdfDocument trip={trip} days={days} />}
@@ -144,7 +227,7 @@ function TripPage() {
                 {({ loading }) => (
                   <button
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] disabled:opacity-50 cursor-pointer"
                   >
                     {loading ? '⏳ Préparation…' : '📄 Télécharger le PDF'}
                   </button>
@@ -160,7 +243,6 @@ function TripPage() {
           </>
         )}
 
-        {/* Loading overlay during generation */}
         {generateMutation.isPending && (
           <div className="mt-4 rounded-2xl bg-white p-6 text-center shadow-sm">
             <div className="mb-2 text-2xl">✨</div>
