@@ -3,7 +3,9 @@ import { env } from './env.js';
 import cors from '@fastify/cors';
 import { fastifyTRPCPlugin, FastifyTRPCPluginOptions } from '@trpc/server/adapters/fastify';
 import { fromNodeHeaders } from 'better-auth/node';
+import { sql } from 'drizzle-orm';
 import Fastify from 'fastify';
+import { db } from './lib/db.js';
 import { auth } from './lib/auth.js';
 import { createContext } from './trpc/context.js';
 import { AppRouter, appRouter } from './trpc/router.js';
@@ -29,6 +31,17 @@ await server.register(cors, {
   credentials: true, // Allow cookies to be sent in cross-origin requests
   allowedHeaders: ['Content-Type', 'Authorization', 'trpc-accept'], // Allow these headers in requests
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow these HTTP methods
+});
+
+server.get('/health', async (request, reply) => {
+  try {
+    await db.execute(sql`SELECT 1`);
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  } catch (error) {
+    server.log.error(error, 'Health check DB error');
+    reply.status(500);
+    return { status: 'error', message: (error as Error).message };
+  }
 });
 
 server.route({

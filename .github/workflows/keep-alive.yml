@@ -1,0 +1,20 @@
+name: Keep Alive Services
+
+on:
+  schedule:
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-services:
+    name: Ping Services (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [production, staging]
+    environment: ${{ matrix.environment }}
+    steps:
+      - name: Ping Render Backend
+        run: |
+          echo "Pinging backend and database for ${{ matrix.environment }}..."
+          curl -s -f -w "HTTP Status: %{http_code}\n" "${{ secrets.RENDER_API_URL }}/health"
