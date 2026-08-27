@@ -238,9 +238,9 @@ function DiscoveryPage() {
   const skipStamp = drag.x < -20 ? Math.min(-drag.x / 90, 1) : 0
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-[#1a1a1a] md:bg-[#F2EDE8]">
+    <div className="flex h-[calc(100dvh-61px)] w-full items-center justify-center overflow-hidden bg-[#1a1a1a] md:bg-[#F2EDE8] md:p-4">
       {/* On mobile: full screen. On desktop: centered phone-like frame. */}
-      <div className="relative h-full w-full overflow-hidden md:h-[min(92vh,820px)] md:w-[420px] md:rounded-[2rem] md:bg-[#1a1a1a] md:shadow-2xl">
+      <div className="relative h-full w-full overflow-hidden md:h-[min(88vh,780px)] md:w-[420px] md:rounded-[2rem] md:bg-[#1a1a1a] md:shadow-2xl">
       {/* Card stack */}
       {feedQuery.isLoading && <SkeletonCard />}
 
