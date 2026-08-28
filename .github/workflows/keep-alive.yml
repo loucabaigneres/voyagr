@@ -38,4 +38,4 @@ jobs:
         continue-on-error: true
         run: |
           echo "Pinging backend and database for ${{ matrix.environment }}..."
-          curl -s -f --max-time 15 --connect-timeout 5 -w "HTTP Status: %{http_code}\n" "${{ secrets.RENDER_API_URL }}/health"
+          curl -s -f --connect-timeout 30 --max-time 90 -w "HTTP Status: %{http_code}\n" "${{ secrets.RENDER_API_URL }}/health"
