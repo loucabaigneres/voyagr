@@ -6,15 +6,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  setup-targets:
+    name: Determine Target Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.set-targets.outputs.environments }}
+    steps:
+      - id: set-targets
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # En cron automatique : on pingue les deux environnements
+            echo 'environments=["staging", "production"]' >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            # Déclenchement manuel sur main : prod uniquement
+            echo 'environments=["production"]' >> $GITHUB_OUTPUT
+          else
+            # Déclenchement manuel sur develop ou autre branche : staging uniquement
+            echo 'environments=["staging"]' >> $GITHUB_OUTPUT
+          fi
+
   ping-services:
-    name: Ping Services (${{ matrix.environment }})
+    name: Ping (${{ matrix.environment }})
+    needs: setup-targets
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [production, staging]
+        environment: ${{ fromJson(needs.setup-targets.outputs.environments) }}
     environment: ${{ matrix.environment }}
     steps:
-      - name: Ping Render Backend
+      - name: Ping API & Database
+        continue-on-error: true
         run: |
           echo "Pinging backend and database for ${{ matrix.environment }}..."
-          curl -s -f -w "HTTP Status: %{http_code}\n" "${{ secrets.RENDER_API_URL }}/health"
+          curl -s -f --connect-timeout 30 --max-time 90 -w "HTTP Status: %{http_code}\n" "${{ secrets.RENDER_API_URL }}/health"
