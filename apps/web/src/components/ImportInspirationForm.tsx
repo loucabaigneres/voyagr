@@ -10,22 +10,12 @@ import { CAPTION_UNAVAILABLE, importInspirationSchema } from '../lib/validations
 type ImportResult = RouterOutputs['inspiration']['importFromUrl'];
 
 interface ImportInspirationFormProps {
-  /** Appelé après un import réussi. La navigation éventuelle est à la charge du parent. */
   onSuccess?: (result: ImportResult) => void;
-  /** Affiche un bouton « Annuler » — utile quand le formulaire est monté dans une popup. */
   onCancel?: () => void;
-  /** Densité réduite, pour une modale. */
   compact?: boolean;
   className?: string;
 }
 
-/**
- * Formulaire d'import d'une inspiration (reel / vidéo / post) TikTok ou Instagram.
- *
- * Autonome et sans dépendance au routeur : il peut être monté tel quel dans une page,
- * une modale ou une popup. Le parent est responsable de l'accès (utilisateur connecté)
- * et de ce qui se passe après l'import via `onSuccess`.
- */
 export function ImportInspirationForm({
   onSuccess,
   onCancel,
@@ -84,7 +74,7 @@ export function ImportInspirationForm({
     >
       <div>
         <label htmlFor="inspirationUrl" className="mb-2 block text-sm font-medium text-[#1a1a1a]">
-          Lien TikTok ou Instagram
+          Lien TikTok
         </label>
         <div className="relative">
           <Link2 className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#bbb]" />

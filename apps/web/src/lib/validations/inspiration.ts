@@ -2,7 +2,7 @@ import * as z from 'zod';
 
 // Miroir du schéma d'entrée de `inspiration.importFromUrl` côté API.
 export const importInspirationSchema = z.object({
-  url: z.url('Colle un lien valide (TikTok ou Instagram).'),
+  url: z.url('Colle un lien valide (TikTok).'),
   caption: z.string().max(5000, 'La description est trop longue.').optional(),
 });
 
