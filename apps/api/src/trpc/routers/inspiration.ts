@@ -1,7 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { detectPlatform, extractHashtags, fetchCaption } from '../../lib/socialImport.js';
+import {
+  detectPlatform,
+  extractHashtags,
+  fetchCaption,
+  stripHashtags,
+} from '../../lib/socialImport.js';
 import { importedInspiration } from '../../lib/tables.js';
 import { createTRPCRouter, protectedProcedure } from '../init.js';
 
@@ -47,7 +52,8 @@ export const inspirationRouter = createTRPCRouter({
           userId: ctx.user.id,
           platform,
           originalUrl: input.url,
-          description: caption,
+          // Les hashtags vivent dans `extracted_tags` : on ne les garde pas dans la description.
+          description: stripHashtags(caption) || null,
           // La localisation sera déduite plus tard (géocodage / IA) : la colonne est
           // NOT NULL sans valeur par défaut, on laisse une chaîne vide en attendant.
           extracted_location: '',
