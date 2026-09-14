@@ -5,6 +5,7 @@ import * as z from 'zod';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
 import { discoveryRouter } from './routers/discovery.js';
 import { itineraryRouter } from './routers/itinerary.js';
+import { userRouter } from './routers/user.js';
 import { tripFormSchema } from './schemas/trip.js';
 
 export const appRouter = createTRPCRouter({
@@ -153,6 +154,8 @@ export const appRouter = createTRPCRouter({
     ...discoveryRouter,
     ...itineraryRouter,
   }),
+
+  user: userRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,3 +1,3 @@
 import { schema } from '@voyagr/database';
 
-export const { discoveryContent, trip, tripDay, activity, swipes } = schema;
+export const { discoveryContent, trip, tripDay, activity, swipes, user } = schema;

@@ -483,6 +483,14 @@ export const itineraryRouter = {
         }
       }
 
+      await ctx.db
+        .update(trip)
+        .set({
+          status: 'finalized',
+          updatedAt: new Date(),
+        })
+        .where(eq(trip.id, input.tripId));
+
       return { tripId: input.tripId, numDays: dayPlans.length };
     }),
 } satisfies TRPCRouterRecord;
