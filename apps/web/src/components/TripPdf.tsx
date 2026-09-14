@@ -1,4 +1,5 @@
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Document, Image, Link, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { env } from '../env'
 
 // ─── Types (mirrors getTrip output) ──────────────────────────────────────────
 
@@ -9,6 +10,9 @@ type Activity = {
   description: string | null
   coordinates: string | null
   category: string | null
+  orderIndex: number
+  mainMediaUrl: string | null
+  sourceUrl: string | null
 }
 
 type Day = {
@@ -50,6 +54,15 @@ function formatDate(dateStr: string | null): string {
 
 function cleanDesc(desc: string): string {
   return desc.replace(/\*\*/g, '').replace(/\*/g, '').trim()
+}
+
+/**
+ * Most catalog image hosts send no `Access-Control-Allow-Origin`, so the PDF
+ * renderer cannot read them directly — it fetches them from the browser. The API
+ * relays them instead.
+ */
+function proxiedImage(url: string): string {
+  return `${env.VITE_API_URL}/image-proxy?url=${encodeURIComponent(url)}`
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
@@ -128,6 +141,20 @@ const s = StyleSheet.create({
     marginRight: 10,
     marginTop: 2,
   },
+  thumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 4,
+    marginRight: 10,
+    objectFit: 'cover',
+  },
+  /** Keeps the text column aligned when a place has no picture. */
+  thumbnailFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 4,
+    marginRight: 10,
+  },
   activityContent: {
     flex: 1,
   },
@@ -166,6 +193,12 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: '#555555',
     lineHeight: 1.5,
+  },
+  link: {
+    fontSize: 8,
+    color: '#FF4D4D',
+    marginTop: 3,
+    textDecoration: 'underline',
   },
 
   // Divider between activities
@@ -215,17 +248,8 @@ export function TripPdfDocument({ trip, days }: TripPdfProps) {
 
         {/* Days */}
         {itineraryDays.map((day) => {
-          const hotel      = day.activities.find((a) => a.category === 'hotel')
-          const activities = day.activities.filter((a) => a.category === 'activité')
-          const restaurants = day.activities.filter((a) => a.category === 'restaurant')
-          const ordered    = [
-            ...(hotel ? [hotel] : []),
-            ...activities,
-            ...restaurants,
-            ...day.activities.filter(
-              (a) => a.category !== 'hotel' && a.category !== 'activité' && a.category !== 'restaurant',
-            ),
-          ]
+          // Same order as the app: the planner lays each day out as a route.
+          const ordered = [...day.activities].sort((a, b) => a.orderIndex - b.orderIndex)
 
           return (
             <View key={day.id} style={s.dayBlock} wrap={false}>
@@ -242,11 +266,24 @@ export function TripPdfDocument({ trip, days }: TripPdfProps) {
                 const info   = categoryInfo(act.category)
                 const coords = parseCoords(act.coordinates)
                 const desc   = act.description ? cleanDesc(act.description) : null
+                // Activities carry generic stock pictures that add weight without
+                // helping; only places you actually go to get a thumbnail.
+                const showThumbnail = act.category !== 'activité'
 
                 return (
                   <View key={act.id}>
                     <View style={s.activityRow}>
                       <View style={[s.activityLeft, { backgroundColor: info.color }]} />
+
+                      {showThumbnail &&
+                        (act.mainMediaUrl ? (
+                          <Image style={s.thumbnail} src={proxiedImage(act.mainMediaUrl)} />
+                        ) : (
+                          <View
+                            style={[s.thumbnailFallback, { backgroundColor: `${info.color}22` }]}
+                          />
+                        ))}
+
                       <View style={s.activityContent}>
                         <View style={s.activityHeader}>
                           <Text style={s.activityTitle}>{act.title}</Text>
@@ -262,6 +299,11 @@ export function TripPdfDocument({ trip, days }: TripPdfProps) {
                         )}
                         {desc && (
                           <Text style={s.description}>{desc}</Text>
+                        )}
+                        {act.sourceUrl && (
+                          <Link style={s.link} src={act.sourceUrl}>
+                            Voir l'offre en ligne
+                          </Link>
                         )}
                       </View>
                     </View>
