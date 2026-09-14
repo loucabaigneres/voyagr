@@ -4,6 +4,7 @@ import { and, eq, notExists } from 'drizzle-orm';
 import * as z from 'zod';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from './init.js';
 import { discoveryRouter } from './routers/discovery.js';
+import { inspirationRouter } from './routers/inspiration.js';
 import { itineraryRouter } from './routers/itinerary.js';
 import { userRouter } from './routers/user.js';
 import { tripFormSchema } from './schemas/trip.js';
@@ -156,6 +157,9 @@ export const appRouter = createTRPCRouter({
   }),
 
   user: userRouter,
+
+  // Import d'inspirations depuis TikTok / Instagram
+  inspiration: inspirationRouter,
 });
 
 export type AppRouter = typeof appRouter;

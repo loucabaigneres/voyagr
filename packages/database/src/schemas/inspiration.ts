@@ -12,6 +12,8 @@ export const importedInspiration = pgTable('imported_inspiration', {
   userId: text('user_id').notNull(),
   platform: platformEnum('platform').notNull(),
   originalUrl: text('original_url').notNull(),
+  // Légende brute de la publication, telle que récupérée (ou collée à la main).
+  description: text('description'),
   extracted_location: text('extracted_location').notNull(),
   extracted_tags: jsonb('extracted_tags').notNull(),
   status: processingStatus('status').notNull(),
