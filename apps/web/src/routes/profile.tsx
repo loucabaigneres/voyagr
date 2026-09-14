@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+import { InspirationList } from '../components/InspirationList';
 import { authClient } from '../lib/auth-client';
 import { trpc } from '../lib/trpc';
 
@@ -13,7 +14,7 @@ function ProfilePage() {
   const queryClient = useQueryClient();
   const { data: session, isPending: isSessionLoading } = authClient.useSession();
 
-  const [activeTab, setActiveTab] = useState<'trips' | 'settings'>('trips');
+  const [activeTab, setActiveTab] = useState<'trips' | 'imports' | 'settings'>('trips');
   const [nameInput, setNameInput] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
@@ -119,6 +120,17 @@ function ProfilePage() {
         </button>
         <button
           type="button"
+          onClick={() => setActiveTab('imports')}
+          className={`rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-95 cursor-pointer ${
+            activeTab === 'imports'
+              ? 'bg-[#FF4D4D] text-white shadow-lg shadow-red-500/20'
+              : 'bg-white text-[#555] border border-[#ddd] hover:bg-[#faf8f6]'
+          }`}
+        >
+          Inspirations
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('settings')}
           className={`rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-95 cursor-pointer ${
             activeTab === 'settings'
@@ -168,6 +180,18 @@ function ProfilePage() {
               </div>
             )}
           </div>
+        ) : activeTab === 'imports' ? (
+          <InspirationList
+            enabled={!!session?.user}
+            emptyAction={
+              <Link
+                to="/importVideo"
+                className="mt-2 rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition active:scale-95"
+              >
+                Importer une inspiration
+              </Link>
+            }
+          />
         ) : (
           <form
             onSubmit={handleSaveProfile}
