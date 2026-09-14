@@ -2,7 +2,7 @@ FROM node:24-alpine
 
 RUN apk add --no-cache libc6-compat python3 make g++
 
-RUN npm install -g pnpm
+RUN corepack enable
 
 WORKDIR /app
 
