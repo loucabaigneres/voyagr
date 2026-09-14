@@ -394,6 +394,14 @@ export const itineraryRouter = {
         if (activityRows.length > 0) await tx.insert(activity).values(activityRows);
       });
 
+      await ctx.db
+        .update(trip)
+        .set({
+          status: 'finalized',
+          updatedAt: new Date(),
+        })
+        .where(eq(trip.id, input.tripId));
+
       return { tripId: input.tripId, numDays: dayPlans.length };
     }),
 

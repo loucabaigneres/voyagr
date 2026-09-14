@@ -38,7 +38,7 @@ voyagr/
 Ensure you have the following tools installed on your machine:
 
 - [Node.js](https://nodejs.org/) (Version 24 LTS)
-- [pnpm](https://pnpm.io/installation) (`npm install -g pnpm`)
+- [pnpm](https://pnpm.io/installation) (`npm install -g pnpm@10.33.2`)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Docker-Compose)
 
 ### 2. Install Dependencies
