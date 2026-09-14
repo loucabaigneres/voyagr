@@ -181,17 +181,15 @@ function ProfilePage() {
             )}
           </div>
         ) : activeTab === 'imports' ? (
-          <InspirationList
-            enabled={!!session?.user}
-            emptyAction={
-              <Link
-                to="/importVideo"
-                className="mt-2 rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition active:scale-95"
-              >
-                Importer une inspiration
-              </Link>
-            }
-          />
+          <div>
+            <InspirationList enabled={!!session?.user} />
+            <Link
+              to="/importVideo"
+              className="mt-4 flex w-full items-center justify-center rounded-2xl bg-[#FF4D4D] py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95"
+            >
+              Ajouter une inspiration
+            </Link>
+          </div>
         ) : (
           <form
             onSubmit={handleSaveProfile}
