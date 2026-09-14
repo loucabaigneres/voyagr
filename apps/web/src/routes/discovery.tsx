@@ -870,7 +870,12 @@ function ResultOverlay({
   onSave,
   saveState,
 }: {
-  query: { data: RecommendationOutput | undefined; isLoading: boolean; isError: boolean }
+  query: {
+    data: RecommendationOutput | undefined
+    isLoading: boolean
+    isError: boolean
+    refetch: () => unknown
+  }
   likes: number
   skips: number
   onClose: () => void
@@ -879,172 +884,223 @@ function ResultOverlay({
   saveState: SaveState
 }) {
   const shown = useEntrance()
+  const titleId = useId()
   const result = query.data
   const top: Destination | undefined = result?.destinations[0]
+  const isReady = !!result && result.status === 'ok' && !!top
+
+  // Keep the page behind the sheet still.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      className={`fixed inset-0 z-[100] flex items-end justify-center bg-black/55 backdrop-blur-[2px] transition-opacity duration-300 sm:items-center sm:p-6 ${
+        shown ? 'opacity-100' : 'opacity-0'
+      }`}
       onClick={onClose}
     >
       <div
-        className="max-h-[94vh] w-full max-w-[520px] overflow-y-auto rounded-t-3xl bg-[#F2EDE8] transition-transform duration-300 [scrollbar-width:none]"
-        style={{ transform: shown ? 'translateY(0)' : 'translateY(100%)' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative flex max-h-[92dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-t-[28px] bg-[#F2EDE8] shadow-2xl transition-transform duration-300 ease-out sm:max-h-[90vh] sm:rounded-[28px]"
+        style={{ transform: shown ? 'translateY(0)' : 'translateY(48px)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mt-3.5 h-1 w-10 rounded-full bg-[#ddd]" />
+        <button
+          type="button"
+          onClick={onClose}
+          autoFocus
+          aria-label="Fermer"
+          className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white outline-none backdrop-blur-md transition hover:bg-black/60 focus-visible:ring-2 focus-visible:ring-white/80 active:scale-90"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-        {query.isLoading && (
-          <p className="p-10 text-center text-[#888]">Calcul de ta destination…</p>
-        )}
-        {query.isError && (
-          <p className="p-10 text-center text-[#FF4D4D]">Erreur lors du calcul.</p>
-        )}
-        {!query.isLoading && result && result.status !== 'ok' && (
-          <p className="p-10 text-center text-[#888]">
-            Pas encore assez de données — continue à swiper !
-          </p>
-        )}
-
-        {result && top && (
+        {query.isLoading ? (
+          <ResultState titleId={titleId} title="On calcule ta destination…" subtitle="Analyse de tes coups de cœur en cours.">
+            <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-[#FF4D4D] border-t-transparent" aria-hidden />
+          </ResultState>
+        ) : query.isError ? (
+          <ResultState
+            titleId={titleId}
+            title="Le calcul n'a pas abouti"
+            subtitle="Vérifie ta connexion puis réessaie."
+            action={
+              <button
+                type="button"
+                onClick={() => query.refetch()}
+                className="rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95"
+              >
+                Réessayer
+              </button>
+            }
+          >
+            <span className="text-4xl" aria-hidden>📡</span>
+          </ResultState>
+        ) : !isReady || !top ? (
+          <ResultState
+            titleId={titleId}
+            title="Encore quelques swipes"
+            subtitle="Like quelques lieux de plus pour qu'on cerne tes envies."
+            action={
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95"
+              >
+                Continuer à swiper
+              </button>
+            }
+          >
+            <span className="text-4xl" aria-hidden>🧭</span>
+          </ResultState>
+        ) : (
           <>
-            {/* Hero */}
-            <div className="relative h-[220px] overflow-hidden rounded-t-3xl">
-              {top.heroImage && (
-                <img src={top.heroImage} alt="" className="h-full w-full object-cover" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute bottom-5 left-5 right-5">
-                <div className="text-xs font-medium uppercase tracking-wider text-white/70">
-                  Ta prochaine destination ✈️
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none]">
+              {/* ── Hero ── */}
+              <div className="relative h-72 bg-[#1a1a1a] sm:h-80">
+                {top.heroImage && (
+                  <img src={top.heroImage} alt="" className="h-full w-full object-cover" />
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/20" />
+                <div className="pointer-events-none absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-white/70 sm:hidden" />
+                <div className="absolute inset-x-0 bottom-0 p-6">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
+                    ✈️ Ta destination idéale
+                  </span>
+                  <h2 id={titleId} className="mt-2 text-5xl font-black leading-none text-white">
+                    {top.city}
+                  </h2>
+                  <p className="mt-2 text-sm font-medium text-white/85">
+                    {COUNTRY_FLAGS[top.country] ? `${COUNTRY_FLAGS[top.country]} ` : ''}
+                    {top.country}
+                  </p>
                 </div>
-                <div className="mt-1 text-4xl font-black text-white">{top.city}</div>
-                <div className="mt-0.5 text-sm text-white/80">
-                  {COUNTRY_FLAGS[top.country] ?? ''} {top.country}
-                </div>
+              </div>
+
+              {/* ── Content ── */}
+              <div className="space-y-6 px-5 pb-6 pt-5">
+                <MatchSummary confidence={result!.confidence} likes={likes} seen={likes + skips} />
+
+                {top.likedHere.length > 0 && (
+                  <section>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#888]">
+                      Tes coups de cœur à {top.city}
+                    </h3>
+                    <ul className="-mx-5 mt-2.5 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+                      {top.likedHere.map((place: LikedPlace) => (
+                        <li key={place.id} className="w-36 shrink-0 snap-start">
+                          <a
+                            href={place.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group block overflow-hidden rounded-2xl border border-[#eee] bg-white transition hover:border-[#FF4D4D]"
+                          >
+                            <div className="h-24 overflow-hidden bg-[#ddd]">
+                              <img
+                                src={place.mainMediaUrl}
+                                alt=""
+                                loading="lazy"
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                              />
+                            </div>
+                            <div className="px-2.5 py-2">
+                              <p className="line-clamp-2 min-h-[2.2rem] text-xs font-semibold leading-snug text-[#1a1a1a]">
+                                {place.locationName}
+                              </p>
+                            </div>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {top.topSubcategories.length > 0 && (
+                  <section>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#888]">
+                      L'ambiance sur place
+                    </h3>
+                    <ul className="mt-2.5 flex flex-wrap gap-2">
+                      {top.topSubcategories.slice(0, 8).map((sub: Subcategory) => (
+                        <li
+                          key={sub.name}
+                          className="rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-xs font-semibold capitalize text-[#1a1a1a]"
+                        >
+                          {sub.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                <section className="flex gap-3 rounded-2xl border border-[#eee] bg-white p-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FF4D4D]/10 text-lg" aria-hidden>
+                    🗓️
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1a1a1a]">Et ensuite ?</h3>
+                    <p className="mt-0.5 text-sm leading-relaxed text-[#888]">
+                      Choisis tes dates, ton budget et ton rythme : on construit ton itinéraire jour
+                      par jour avec les lieux que tu as aimés.
+                    </p>
+                  </div>
+                </section>
               </div>
             </div>
 
-            <div className="px-5 pb-10">
-              {/* Score */}
-              <div className="mt-5 flex items-center gap-4 rounded-2xl bg-white p-4">
-                <ScoreRing pct={Math.round(result.confidence * 100)} />
-                <div className="flex-1 text-sm text-[#666]">
-                  <div><b className="text-[#1a1a1a]">{result.likes}</b> likes · <b className="text-[#1a1a1a]">{result.skips}</b> skips</div>
-                  <div className="mt-0.5">Score : <b className="text-[#1a1a1a]">{top.score.toFixed(1)}</b> pts</div>
-                  <div>{result.totalSwipes} swipes au total</div>
-                </div>
-              </div>
-
-              {/* Classement */}
-              <h3 className="mb-3 mt-6 text-base font-bold text-[#1a1a1a]">Classement complet</h3>
-              <div className="flex flex-col gap-2">
-                {result.destinations.map((d: Destination, i: number) => (
-                  <div
-                    key={d.city}
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${
-                      i === 0 ? 'bg-[#FF4D4D] text-white' : 'bg-white text-[#1a1a1a]'
-                    }`}
-                  >
-                    <span className="text-lg">{['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold truncate">{d.city}</div>
-                      <div className={`text-xs ${i === 0 ? 'text-white/70' : 'text-[#888]'}`}>
-                        {d.country} · {d.score.toFixed(1)} pts
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Lieux likés */}
-              {top.likedHere.length > 0 && (
-                <>
-                  <h3 className="mb-3 mt-6 text-base font-bold text-[#1a1a1a]">Lieux que tu as likés</h3>
-                  <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
-                    {top.likedHere.map((p: LikedPlace) => (
-                      <a
-                        key={p.id}
-                        href={p.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-[120px] flex-shrink-0 overflow-hidden rounded-xl bg-white shadow-sm transition active:scale-95"
-                      >
-                        <img src={p.mainMediaUrl} alt="" className="h-[76px] w-full object-cover" />
-                        <div className="truncate px-2 py-1.5 text-[0.68rem] font-medium text-[#1a1a1a]">{p.locationName}</div>
-                      </a>
-                    ))}
-                  </div>
-                </>
+            {/* ── Actions (always visible) ── */}
+            <div className="space-y-2 border-t border-[#ddd]/70 bg-[#F2EDE8] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+              {saveState.isError && (
+                <p role="alert" className="text-center text-xs font-semibold text-[#FF4D4D]">
+                  Impossible de créer ton voyage pour le moment. Réessaie dans un instant.
+                </p>
               )}
-
-              {/* Ambiances */}
-              {top.topSubcategories.length > 0 && (
-                <>
-                  <h3 className="mb-3 mt-6 text-base font-bold text-[#1a1a1a]">Ambiances disponibles</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {top.topSubcategories.slice(0, 8).map((s: Subcategory) => (
-                      <span
-                        key={s.name}
-                        className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1a1a1a]"
-                      >
-                        {s.name} <span className="text-[#FF4D4D]">·{s.count}</span>
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Stats */}
-              <div className="mt-6 grid grid-cols-2 gap-2">
-                <StatCard value={`${Math.round((likes / (likes + skips || 1)) * 100)}%`} label="Taux de like" />
-                <StatCard value={String(result.destinations.length)} label="Destinations classées" />
-              </div>
-
-              {/* Villes exclues */}
-              {result.vetoedCities.length > 0 && (
-                <>
-                  <h3 className="mb-2 mt-5 text-sm font-bold text-[#888]">Villes exclues</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {result.vetoedCities.map((c: string) => (
-                      <span key={c} className="rounded-full bg-[#fee] px-3 py-1 text-xs text-[#FF4D4D]">
-                        🚫 {c}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Save */}
-              <div className="mt-8">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={saveState.isPending}
+                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#FF4D4D] text-[15px] font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-70"
+              >
                 {saveState.isPending ? (
-                  <button disabled className="w-full rounded-2xl bg-[#FF4D4D] py-4 text-sm font-bold text-white opacity-70">
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
                     Création du voyage…
-                  </button>
+                  </>
                 ) : (
-                  <button
-                    onClick={onSave}
-                    className="w-full rounded-2xl bg-[#FF4D4D] py-4 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition active:scale-95"
-                  >
-                    🗺️ Créer mon voyage
-                  </button>
+                  <>
+                    Planifier mon voyage à {top.city}
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-6-6 6 6-6 6" />
+                    </svg>
+                  </>
                 )}
-                {saveState.isError && (
-                  <p className="mt-2 text-center text-xs text-[#FF4D4D]">Échec — la base de données est-elle démarrée ?</p>
-                )}
-              </div>
-
-              <div className="mt-3 flex gap-2">
+              </button>
+              <div className="grid grid-cols-2 gap-2">
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="flex-1 rounded-2xl border border-[#ddd] bg-white py-3.5 text-sm font-semibold text-[#1a1a1a] transition active:scale-95"
+                  className="h-11 rounded-2xl border border-[#ddd] bg-white text-sm font-semibold text-[#1a1a1a] transition hover:border-[#1a1a1a] active:scale-95"
                 >
                   Continuer à swiper
                 </button>
                 <button
+                  type="button"
                   onClick={onRestart}
-                  className="rounded-2xl border border-[#ddd] bg-white px-5 py-3.5 text-sm font-semibold text-[#888] transition active:scale-95"
+                  className="flex h-11 items-center justify-center gap-1.5 rounded-2xl text-sm font-semibold text-[#888] transition hover:bg-white hover:text-[#1a1a1a] active:scale-95"
                 >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" />
+                  </svg>
                   Recommencer
                 </button>
               </div>
@@ -1056,32 +1112,71 @@ function ResultOverlay({
   )
 }
 
-function StatCard({ value, label }: { value: string; label: string }) {
+function ResultState({
+  titleId,
+  title,
+  subtitle,
+  action,
+  children,
+}: {
+  titleId: string
+  title: string
+  subtitle: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
-    <div className="rounded-2xl bg-white p-4">
-      <div className="text-2xl font-extrabold text-[#1a1a1a]">{value}</div>
-      <div className="mt-0.5 text-xs text-[#888]">{label}</div>
+    <div className="flex flex-col items-center gap-3 px-8 pb-12 pt-16 text-center">
+      {children}
+      <h2 id={titleId} className="mt-1 text-lg font-bold text-[#1a1a1a]">
+        {title}
+      </h2>
+      <p className="max-w-xs text-sm text-[#888]">{subtitle}</p>
+      {action && <div className="mt-3">{action}</div>}
     </div>
   )
 }
 
-function ScoreRing({ pct }: { pct: number }) {
-  const C = 2 * Math.PI * 30
-  const offset = C - (pct / 100) * C
+/** `confidence` grows with the number of swipes: it tells how reliable the pick is. */
+function confidenceLabel(pct: number): string {
+  if (pct >= 90) return 'Recommandation fiable'
+  if (pct >= 50) return 'Tendance qui se confirme'
+  return 'Première tendance'
+}
+
+function MatchSummary({ confidence, likes, seen }: { confidence: number; likes: number; seen: number }) {
+  const pct = Math.round(confidence * 100)
+  const radius = 26
+  const circumference = 2 * Math.PI * radius
+
   return (
-    <div className="relative h-[72px] w-[72px] flex-shrink-0">
-      <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
-        <circle cx="36" cy="36" r="30" fill="none" stroke="#eee" strokeWidth="6" />
-        <circle
-          cx="36" cy="36" r="30" fill="none"
-          stroke="#FF4D4D" strokeWidth="6" strokeLinecap="round"
-          strokeDasharray={C} strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 1s ease' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-extrabold text-[#1a1a1a]">{pct}%</span>
-        <span className="text-[0.55rem] text-[#888]">match</span>
+    <div className="flex items-center gap-4 rounded-2xl border border-[#eee] bg-white p-4">
+      <div className="relative h-16 w-16 shrink-0" role="img" aria-label={`Fiabilité ${pct} %`}>
+        <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
+          <circle cx="32" cy="32" r={radius} fill="none" stroke="#eee" strokeWidth="6" />
+          <circle
+            cx="32"
+            cy="32"
+            r={radius}
+            fill="none"
+            stroke="#FF4D4D"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - (pct / 100) * circumference}
+            style={{ transition: 'stroke-dashoffset 1s ease' }}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-sm font-extrabold text-[#1a1a1a]">
+          {pct}%
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="font-bold text-[#1a1a1a]">{confidenceLabel(pct)}</p>
+        <p className="mt-0.5 text-sm leading-snug text-[#888]">
+          Basé sur tes {likes} coups de cœur parmi {seen} lieux découverts.
+          {pct < 90 && ' Continue à swiper pour affiner.'}
+        </p>
       </div>
     </div>
   )
