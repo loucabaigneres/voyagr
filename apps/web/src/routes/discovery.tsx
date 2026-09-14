@@ -419,32 +419,6 @@ function DiscoveryPage() {
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
-                  {/* Swipe feedback: tinted edge + label */}
-                  {isTop && (
-                    <>
-                      <div
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-l from-[#2ecc71]/45 via-transparent to-transparent"
-                        style={{ opacity: likeStamp }}
-                      />
-                      <div
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#FF4D4D]/45 via-transparent to-transparent"
-                        style={{ opacity: skipStamp }}
-                      />
-                      <div
-                        className="pointer-events-none absolute left-5 top-16 -rotate-12 rounded-2xl border-[3px] border-[#2ecc71] bg-white/90 px-4 py-1.5 text-2xl font-black tracking-wider text-[#2ecc71]"
-                        style={{ opacity: likeStamp, transform: `scale(${0.85 + likeStamp * 0.15})` }}
-                      >
-                        J'ADORE
-                      </div>
-                      <div
-                        className="pointer-events-none absolute right-5 top-16 rotate-12 rounded-2xl border-[3px] border-[#FF4D4D] bg-white/90 px-4 py-1.5 text-2xl font-black tracking-wider text-[#FF4D4D]"
-                        style={{ opacity: skipStamp, transform: `scale(${0.85 + skipStamp * 0.15})` }}
-                      >
-                        PASSER
-                      </div>
-                    </>
-                  )}
-
                   {/* Top: photo indicators + category */}
                   <div className="pointer-events-none absolute inset-x-0 top-0 p-3">
                     {photos.length > 1 && (
