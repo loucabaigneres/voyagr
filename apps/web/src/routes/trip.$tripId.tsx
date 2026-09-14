@@ -27,6 +27,15 @@ function categoryMeta(cat: string | null) {
   return CATEGORY_META[cat ?? ''] ?? { emoji: '📍', label: cat ?? '', color: 'rgba(0,0,0,.05)' }
 }
 
+/** Same pin as the swipe card, so both views share one visual vocabulary. */
+function PinIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+    </svg>
+  )
+}
+
 function TripPage() {
   const { tripId } = Route.useParams()
   const navigate = useNavigate()
@@ -74,19 +83,28 @@ function TripPage() {
 
   if (tripQuery.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8]">
-        <div className="text-sm font-medium text-[#888]">Chargement…</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8] px-4">
+        <div className="flex w-full max-w-[520px] flex-col items-center gap-3 rounded-[28px] border border-[#eee] bg-white px-8 py-14 text-center shadow-sm">
+          <span className="animate-pulse text-4xl" aria-hidden>🧭</span>
+          <p className="text-sm font-semibold text-[#888]">Chargement de ton voyage…</p>
+        </div>
       </div>
     )
   }
 
   if (tripQuery.isError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F2EDE8]">
-        <p className="text-sm text-[#FF4D4D]">Voyage introuvable.</p>
-        <Link to="/discovery" className="text-sm font-semibold text-[#FF4D4D] underline">
-          Retour à la découverte
-        </Link>
+      <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8] px-4">
+        <div className="flex w-full max-w-[520px] flex-col items-center gap-3 rounded-[28px] border border-[#eee] bg-white px-8 py-14 text-center shadow-sm">
+          <span className="text-4xl" aria-hidden>🧳</span>
+          <p className="text-sm font-semibold text-[#1a1a1a]">Voyage introuvable.</p>
+          <Link
+            to="/discovery"
+            className="mt-1 rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95"
+          >
+            Retour à la découverte
+          </Link>
+        </div>
       </div>
     )
   }
@@ -112,198 +130,256 @@ function TripPage() {
   const likedDay = days.find((d) => d.dayIndex === 0)
   const alternativeHotels = days.find((d) => d.dayIndex === -1)?.activities ?? []
 
+  const plannedCount = itineraryDays.reduce((total, day) => total + day.activities.length, 0)
+  // Cover photo: first itinerary place that has one, else a liked place.
+  const heroImage =
+    itineraryDays.flatMap((d) => d.activities).find((a) => a.mainMediaUrl)?.mainMediaUrl ??
+    likedDay?.activities.find((a) => a.mainMediaUrl)?.mainMediaUrl ??
+    null
+
   return (
     <div className="min-h-screen bg-[#F2EDE8] text-[#1a1a1a]">
-      {/* Header */}
-      <div className="border-b border-[#e5ded6] bg-white">
-        <div className="mx-auto max-w-2xl px-4 py-5">
-          <button
-            type="button"
-            onClick={() => window.history.back()}
-            className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#888] hover:text-[#FF4D4D] cursor-pointer"
-          >
-            ← Retour
-          </button>
+      <div className="mx-auto w-full max-w-[520px] px-4 pb-12 pt-3 md:pt-5">
+        {/* ── Hero ── */}
+        <div className="relative overflow-hidden rounded-[28px] bg-[#1a1a1a] shadow-[0_24px_50px_-24px_rgba(26,26,26,0.55)]">
+          <div className="relative h-[260px] w-full">
+            {heroImage ? (
+              <img src={heroImage} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-white/15">
+                <svg className="h-16 w-16" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75 3.75 9v10.5L9 17.25m0-10.5 6 2.5m-6-2.5v10.5m6-8 5.25-2.25V15L15 17.25m0-10.5v10.5m0 0-6-2.5" />
+                </svg>
+              </div>
+            )}
 
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-extrabold">{trip.title ?? 'Mon voyage'}</h1>
-              {trip.destination && (
-                <p className="mt-0.5 flex items-center gap-1 text-sm text-[#888]">
-                  <svg className="h-4 w-4 text-[#FF4D4D]" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                  </svg>
-                  {trip.destination}
-                </p>
-              )}
-              {trip.startDate && (
-                <p className="mt-0.5 text-xs text-[#aaa]">
-                  {formatDate(trip.startDate)}
-                  {trip.durationDays ? ` · ${trip.durationDays} jour${trip.durationDays > 1 ? 's' : ''}` : ''}
-                </p>
-              )}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/50 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+
+            <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3.5">
+              <button
+                type="button"
+                onClick={() => window.history.back()}
+                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-black/35 px-3.5 text-xs font-semibold text-white backdrop-blur-md transition hover:bg-black/55 active:scale-95"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Retour
+              </button>
+              <StatusBadge status={trip.status} />
             </div>
 
-            {/* Actions Statut et Sauvegarde */}
-            <div className="flex flex-col items-end gap-2">
-              <StatusBadge status={trip.status} />
-
-              {!isFinalized || !isOwner ? (
-                <button
-                  type="button"
-                  onClick={handleSaveTrip}
-                  disabled={isSavingTrip}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FF4D4D] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-red-500/20 hover:brightness-105 active:scale-95 transition disabled:opacity-50 cursor-pointer"
-                >
-                  {isSavingTrip
-                    ? 'Enregistrement…'
-                    : session?.user
-                      ? '💾 Enregistrer dans mon profil'
-                      : '🔒 Se connecter pour enregistrer'}
-                </button>
-              ) : (
-                <span className="text-[0.7rem] font-semibold text-[#27ae60]">
-                  ✓ Sauvegardé dans ton profil
-                </span>
+            <div className="absolute inset-x-0 bottom-0 p-5">
+              {trip.destination && (
+                <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/85">
+                  <PinIcon className="h-4 w-4 shrink-0 text-[#FF4D4D]" />
+                  <span className="truncate">{trip.destination}</span>
+                </p>
               )}
+              <h1 className="mt-1 line-clamp-2 text-[28px] font-bold leading-[1.15] text-white">
+                {trip.title ?? 'Mon voyage'}
+              </h1>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {trip.startDate && (
+                  <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
+                    {formatDate(trip.startDate)}
+                  </span>
+                )}
+                {trip.durationDays ? (
+                  <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
+                    {trip.durationDays} jour{trip.durationDays > 1 ? 's' : ''}
+                  </span>
+                ) : null}
+                {plannedCount > 0 && (
+                  <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
+                    {plannedCount} étape{plannedCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-2xl px-4 py-6">
+        {/* ── Sauvegarde ── */}
+        {!isFinalized || !isOwner ? (
+          <button
+            type="button"
+            onClick={handleSaveTrip}
+            disabled={isSavingTrip}
+            className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#FF4D4D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50"
+          >
+            {session?.user ? (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 4.5h12a1 1 0 0 1 1 1v14l-7-3.5L5 19.5v-14a1 1 0 0 1 1-1Z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" />
+              </svg>
+            )}
+            {isSavingTrip
+              ? 'Enregistrement…'
+              : session?.user
+                ? 'Enregistrer dans mon profil'
+                : 'Se connecter pour enregistrer'}
+          </button>
+        ) : (
+          <p className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-[rgba(46,204,113,.3)] bg-[rgba(46,204,113,.12)] px-4 py-2.5 text-xs font-semibold text-[#27ae60]">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+            </svg>
+            Sauvegardé dans ton profil
+          </p>
+        )}
+
         {/* Notification de confirmation */}
         {showSavedBanner && (
-          <div className="mb-6 flex items-center justify-between rounded-2xl bg-[#e8f8f0] border border-[#2ecc71]/30 p-4 text-sm font-semibold text-[#27ae60] shadow-sm">
-            <div className="flex items-center gap-2">
-              <span>🎉</span>
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(46,204,113,.3)] bg-[#e8f8f0] p-4 text-sm font-semibold text-[#27ae60] shadow-sm">
+            <span className="flex items-center gap-2">
+              <span aria-hidden>🎉</span>
               <span>Te voilà connecté ! Ton voyage a été enregistré dans ton profil.</span>
-            </div>
+            </span>
             <button
               type="button"
               onClick={() => setShowSavedBanner(false)}
-              className="text-xs text-[#27ae60] hover:underline cursor-pointer"
+              className="shrink-0 cursor-pointer rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#27ae60] transition hover:bg-white"
             >
               Fermer
             </button>
           </div>
         )}
 
-        {/* Bouton de génération */}
+        {/* ── Génération ── */}
         {!isGenerated && (
-          <div className="mb-6">
-            <button
-              onClick={() => generateMutation.mutate({ tripId })}
-              disabled={generateMutation.isPending}
-              className="w-full rounded-2xl bg-[#FF4D4D] px-6 py-4 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
-            >
-              {generateMutation.isPending ? '✨ Génération en cours…' : '✨ Générer mon itinéraire'}
-            </button>
-            {generateMutation.isError && (
-              <p className="mt-2 text-center text-xs text-[#FF4D4D]">
-                {(generateMutation.error as any)?.message ?? 'Erreur lors de la génération.'}
-              </p>
-            )}
-            {!generateMutation.isPending && (
-              <p className="mt-2 text-center text-xs text-[#888]">
-                Organise tes lieux likés en un planning cohérent jour par jour.
-              </p>
-            )}
+          <div className="mt-5 rounded-[28px] border border-[#eee] bg-white p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#888]">Ton planning</h2>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-[#555]">
+              Organise tes lieux likés en un planning cohérent jour par jour.
+            </p>
 
-            {/* Preview of liked items before generation */}
             {likedDay && likedDay.activities.length > 0 && (
-              <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#888]">
+              <>
+                <p className="mt-5 text-xs font-bold uppercase tracking-wider text-[#888]">
                   {likedDay.activities.length} lieu{likedDay.activities.length > 1 ? 'x' : ''} liké{likedDay.activities.length > 1 ? 's' : ''}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="mt-2.5 flex flex-wrap gap-2">
                   {likedDay.activities.map((act) => (
                     <span
                       key={act.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-[#F2EDE8] px-2.5 py-1 text-xs text-[#555]"
+                      className="inline-flex items-center gap-1 rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-xs font-semibold text-[#1a1a1a]"
                     >
-                      {categoryMeta(act.category).emoji} {act.title}
+                      <span aria-hidden>{categoryMeta(act.category).emoji}</span> {act.title}
                     </span>
                   ))}
                 </div>
-              </div>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => generateMutation.mutate({ tripId })}
+              disabled={generateMutation.isPending}
+              className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#FF4D4D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+                <circle cx="12" cy="12" r="9" />
+                <path strokeLinejoin="round" d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+              </svg>
+              {generateMutation.isPending ? 'Génération en cours…' : 'Générer mon itinéraire'}
+            </button>
+
+            {generateMutation.isError && (
+              <p className="mt-2.5 text-center text-xs font-medium text-[#FF4D4D]">
+                {(generateMutation.error as { message?: string })?.message ??
+                  'Erreur lors de la génération.'}
+              </p>
             )}
           </div>
         )}
 
-        {/* Liste des jours d'itinéraire */}
+        {/* ── Itinéraire ── */}
         {isGenerated && (
           <>
-            <div className="mb-4 flex justify-end">
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#888]">
+                Jour par jour
+              </h2>
               <PDFDownloadLink
                 document={<TripPdfDocument trip={trip} days={days} />}
                 fileName={`${trip.destination ?? 'voyage'}-itineraire.pdf`}
               >
                 {({ loading }) => (
                   <button
+                    type="button"
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] disabled:opacity-50 cursor-pointer"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-95 disabled:opacity-50"
                   >
-                    {loading ? '⏳ Préparation…' : '📄 Télécharger le PDF'}
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" />
+                    </svg>
+                    {loading ? 'Préparation…' : 'PDF'}
                   </button>
                 )}
               </PDFDownloadLink>
             </div>
 
-            <div className="flex flex-col gap-5">
+            <div className="mt-3 flex flex-col gap-4">
               {itineraryDays.map((day) => (
                 <DayCard key={day.id} day={day} />
               ))}
             </div>
 
             {alternativeHotels.length > 0 && (
-              <div className="mt-5 overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="border-b border-[#f0eae3] px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#888]">
-                    🏨 Autres hôtels à proximité
-                  </p>
-                  <p className="mt-1 text-xs text-[#aaa]">
+              <>
+                <h2 className="mt-8 text-xs font-bold uppercase tracking-wider text-[#888]">
+                  Autres hôtels à proximité
+                </h2>
+                <div className="mt-3 overflow-hidden rounded-[28px] border border-[#eee] bg-white shadow-sm">
+                  <p className="border-b border-[#f0eae3] px-4 py-3 text-xs text-[#888]">
                     Choisis-en un pour remplacer l'hébergement de ton itinéraire.
                   </p>
+                  <div className="space-y-2.5 bg-[#FBF8F5] p-3">
+                    {alternativeHotels.map((hotel, idx) => (
+                      <ActivityRow
+                        key={hotel.id}
+                        activity={hotel}
+                        index={idx}
+                        action={
+                          <button
+                            type="button"
+                            onClick={() =>
+                              chooseHotelMutation.mutate({ tripId, activityId: hotel.id })
+                            }
+                            disabled={chooseHotelMutation.isPending}
+                            className="cursor-pointer rounded-full border border-[#FF4D4D] px-3.5 py-1.5 text-xs font-semibold text-[#FF4D4D] transition hover:bg-[#FF4D4D] hover:text-white active:scale-95 disabled:opacity-50"
+                          >
+                            {chooseHotelMutation.isPending &&
+                            chooseHotelMutation.variables?.activityId === hotel.id
+                              ? 'Changement…'
+                              : 'Choisir cet hôtel'}
+                          </button>
+                        }
+                      />
+                    ))}
+                  </div>
+                  {chooseHotelMutation.isError && (
+                    <p className="px-4 py-3 text-xs font-medium text-[#FF4D4D]">
+                      {(chooseHotelMutation.error as { message?: string })?.message ??
+                        "Impossible de changer d'hôtel."}
+                    </p>
+                  )}
                 </div>
-                <div className="divide-y divide-[#f5f0ea]">
-                  {alternativeHotels.map((hotel, idx) => (
-                    <ActivityRow
-                      key={hotel.id}
-                      activity={hotel}
-                      index={idx}
-                      action={
-                        <button
-                          onClick={() =>
-                            chooseHotelMutation.mutate({ tripId, activityId: hotel.id })
-                          }
-                          disabled={chooseHotelMutation.isPending}
-                          className="rounded-lg border border-[#FF4D4D] px-3 py-1.5 text-xs font-semibold text-[#FF4D4D] transition hover:bg-[#FF4D4D] hover:text-white disabled:opacity-50"
-                        >
-                          {chooseHotelMutation.isPending &&
-                          chooseHotelMutation.variables?.activityId === hotel.id
-                            ? 'Changement…'
-                            : 'Choisir cet hôtel'}
-                        </button>
-                      }
-                    />
-                  ))}
-                </div>
-                {chooseHotelMutation.isError && (
-                  <p className="px-4 py-3 text-xs text-[#FF4D4D]">
-                    {(chooseHotelMutation.error as { message?: string })?.message ??
-                      "Impossible de changer d'hôtel."}
-                  </p>
-                )}
-              </div>
+              </>
             )}
           </>
         )}
 
         {generateMutation.isPending && (
-          <div className="mt-4 rounded-2xl bg-white p-6 text-center shadow-sm">
-            <div className="mb-2 text-2xl">✨</div>
-            <p className="text-sm text-[#888]">
+          <div className="mt-4 flex flex-col items-center gap-2 rounded-[28px] border border-[#eee] bg-white px-8 py-10 text-center shadow-sm">
+            <span className="animate-pulse text-4xl" aria-hidden>✨</span>
+            <p className="text-sm font-semibold text-[#888]">
               Analyse de tes préférences et optimisation géographique…
             </p>
           </div>
@@ -331,43 +407,50 @@ function DayCard({ day }: { day: Day }) {
     .join(' · ')
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[28px] border border-[#eee] bg-white shadow-sm">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-[#faf7f4]"
+        className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-[#faf7f4]"
       >
         <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 rounded-lg bg-[#FF4D4D] px-2.5 py-0.5 text-xs font-bold text-white">
+          <span className="inline-flex h-7 shrink-0 items-center rounded-full bg-[#FF4D4D] px-3 text-xs font-bold text-white">
             Jour {day.dayIndex}
           </span>
           {day.targetDate && (
-            <span className="shrink-0 text-xs text-[#888]">{formatDate(day.targetDate)}</span>
+            <span className="shrink-0 text-xs font-medium text-[#888]">
+              {formatDate(day.targetDate)}
+            </span>
           )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {summary && <span className="text-xs text-[#aaa]">{summary}</span>}
-          <svg
-            className={`h-4 w-4 text-[#bbb] transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
+          {summary && <span className="hidden text-xs text-[#aaa] sm:block">{summary}</span>}
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#ddd] text-[#888]">
+            <svg
+              className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
         </div>
       </button>
 
       {isOpen && (
-        <div className="divide-y divide-[#f5f0ea] border-t border-[#f0eae3]">
+        <div className="space-y-2.5 border-t border-[#f0eae3] bg-[#FBF8F5] p-3">
           {ordered.map((act, idx) => (
             <ActivityRow key={act.id} activity={act} index={idx} />
           ))}
           {ordered.length === 0 && (
-            <p className="px-4 py-3 text-xs text-[#888]">Aucune activité ce jour.</p>
+            <p className="rounded-2xl border border-[#eee] bg-white px-4 py-3 text-xs text-[#888]">
+              Aucune activité ce jour.
+            </p>
           )}
         </div>
       )}
@@ -389,31 +472,33 @@ function ActivityRow({
   const desc = activity.description ? cleanDesc(activity.description) : null
 
   return (
-    <div className="flex gap-3 px-4 py-3.5">
-      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(255,77,77,.12)] text-[0.65rem] font-bold text-[#FF4D4D]">
-        {index + 1}
+    <div className="flex gap-3 rounded-2xl border border-[#eee] bg-white p-3 transition hover:border-[#FF4D4D]">
+      <div className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-xl">
+        {activity.mainMediaUrl ? (
+          <img
+            src={activity.mainMediaUrl}
+            alt={activity.title}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center text-2xl"
+            style={{ background: meta.color }}
+            aria-hidden
+          >
+            {meta.emoji}
+          </div>
+        )}
+        <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/45 text-[10px] font-bold text-white backdrop-blur-md">
+          {index + 1}
+        </span>
       </div>
-
-      {activity.mainMediaUrl ? (
-        <img
-          src={activity.mainMediaUrl}
-          alt={activity.title}
-          className="h-16 w-16 shrink-0 rounded-xl object-cover"
-        />
-      ) : (
-        <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl text-2xl"
-          style={{ background: meta.color }}
-        >
-          {meta.emoji}
-        </div>
-      )}
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold leading-tight text-[#1a1a1a]">{activity.title}</p>
+          <p className="text-[15px] font-semibold leading-tight text-[#1a1a1a]">{activity.title}</p>
           <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-[#555]"
+            className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#555]"
             style={{ background: meta.color }}
           >
             {meta.label}
@@ -421,7 +506,10 @@ function ActivityRow({
         </div>
 
         {activity.locationName && activity.locationName !== activity.title && (
-          <p className="mt-0.5 text-xs text-[#888]">📍 {activity.locationName}</p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-[#888]">
+            <PinIcon className="h-3.5 w-3.5 shrink-0 text-[#FF4D4D]" />
+            <span className="truncate">{activity.locationName}</span>
+          </p>
         )}
 
         {desc && (
@@ -433,9 +521,12 @@ function ActivityRow({
             href={activity.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1.5 inline-block text-xs font-medium text-[#FF4D4D] underline decoration-[#FF4D4D]/40 underline-offset-2 hover:decoration-[#FF4D4D]"
+            className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#FF4D4D] hover:underline"
           >
-            Voir l'offre ↗
+            Voir l'offre
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
           </a>
         )}
 
@@ -446,15 +537,16 @@ function ActivityRow({
 }
 
 function StatusBadge({ status }: { status: string | null }) {
-  const styles: Record<string, string> = {
-    draft:     'bg-[#F2EDE8] text-[#888] border-[#ddd]',
-    finalized: 'bg-[rgba(46,204,113,.1)] text-[#27ae60] border-[rgba(46,204,113,.25)]',
-    archived:  'bg-[rgba(255,77,77,.08)] text-[#FF4D4D] border-[rgba(255,77,77,.25)]',
+  const dots: Record<string, string> = {
+    draft:     'bg-white/70',
+    finalized: 'bg-[#2ecc71]',
+    archived:  'bg-[#FF4D4D]',
   }
   const labels: Record<string, string> = { draft: 'Brouillon', finalized: 'Finalisé', archived: 'Archivé' }
   const s = status ?? 'draft'
   return (
-    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${styles[s] ?? styles['draft']}`}>
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md">
+      <span className={`h-1.5 w-1.5 rounded-full ${dots[s] ?? dots['draft']}`} aria-hidden />
       {labels[s] ?? s}
     </span>
   )
