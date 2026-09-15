@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImportVideoRouteImport } from './routes/importVideo'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
@@ -26,6 +27,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/discovery': typeof DiscoveryRoute
   '/importVideo': typeof ImportVideoRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/trip/$tripId': typeof TripTripIdRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/discovery': typeof DiscoveryRoute
   '/importVideo': typeof ImportVideoRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/trip/$tripId': typeof TripTripIdRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/discovery': typeof DiscoveryRoute
   '/importVideo': typeof ImportVideoRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/trip/$tripId': typeof TripTripIdRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/importVideo'
     | '/login'
+    | '/onboarding'
     | '/profile'
     | '/register'
     | '/trip/$tripId'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/importVideo'
     | '/login'
+    | '/onboarding'
     | '/profile'
     | '/register'
     | '/trip/$tripId'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/importVideo'
     | '/login'
+    | '/onboarding'
     | '/profile'
     | '/register'
     | '/trip/$tripId'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   DiscoveryRoute: typeof DiscoveryRoute
   ImportVideoRoute: typeof ImportVideoRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   TripTripIdRoute: typeof TripTripIdRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoveryRoute: DiscoveryRoute,
   ImportVideoRoute: ImportVideoRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   TripTripIdRoute: TripTripIdRoute,

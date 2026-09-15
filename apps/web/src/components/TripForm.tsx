@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { TripFormValues } from '../lib/validations/trip';
-import { AVAILABLE_INTERESTS, DIETARY_OPTIONS, MEDICAL_OPTIONS, tripFormSchema } from '../lib/validations/trip';
+import { DIETARY_OPTIONS, MEDICAL_OPTIONS, tripFormSchema } from '../lib/validations/trip';
 
 interface TripFormProps {
   initialDestination?: string;
@@ -23,7 +23,6 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
       durationDays: 7,
       averagePrice: 'mid',
       intensity: 'balanced',
-      interests: [],
       dietaryOptions: [],
       dietaryCustom: "",
       medicalOptions: [],
@@ -37,7 +36,6 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
   });
 
   const numberOfPeople = watch("numberOfPeople");
-  const currentInterests = watch("interests");
 
   useEffect(() => {
     const currentCount = ageFields.length;
@@ -49,14 +47,6 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
       for (let i = currentCount - 1; i >= targetCount; i--) remove(i);
     }
   }, [numberOfPeople, ageFields.length, append, remove]);
-
-  const toggleInterest = (interestId: string) => {
-    if (currentInterests.includes(interestId)) {
-      setValue("interests", currentInterests.filter(i => i !== interestId), { shouldValidate: true });
-    } else {
-      setValue("interests", [...currentInterests, interestId], { shouldValidate: true });
-    }
-  };
 
   const currentDietary = watch("dietaryOptions");
   const currentMedical = watch("medicalOptions");
@@ -78,7 +68,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
     if (step === 1) {
       fieldsToValidate = ['destination', 'startDate', 'durationDays', 'numberOfPeople', 'ages'];
     } else if (step === 2) {
-      fieldsToValidate = ['intensity', 'averagePrice', 'interests']
+      fieldsToValidate = ['intensity', 'averagePrice'];
     }
 
     const isStepValid = await trigger(fieldsToValidate);
@@ -90,8 +80,8 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
 
   const handlePrev = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    setStep((prev: number) => prev - 1)
-  }
+    setStep((prev: number) => prev - 1);
+  };
 
   return (
     <div className="max-w-2xl mx-auto p-6 sm:p-8 bg-white rounded-3xl shadow-sm mt-6">
@@ -101,22 +91,27 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-extrabold text-[#1a1a1a]">
             {step === 1 && "Les bases du voyage"}
-            {step === 2 && "L'ambiance"}
+            {step === 2 && "Le rythme & budget"}
             {step === 3 && "Les derniers détails"}
           </h1>
           <span className="text-sm font-medium text-[#aaa]">Étape {step} sur {totalSteps}</span>
         </div>
 
-        {/* Barre de progression visuelle */}
         <div className="w-full bg-[#F2EDE8] rounded-full h-2">
           <div
             className="bg-[#FF4D4D] h-2 rounded-full transition-all duration-300"
             style={{ width: `${(step / totalSteps) * 100}%` }}
-          ></div>
+          />
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form
+        onSubmit={handleSubmit(
+          onSubmit,
+          (errs) => console.warn('Erreurs de validation :', errs),
+        )}
+        className="space-y-8"
+      >
         
         {/* ================= ÉTAPE 1 : LES BASES ================= */}
         {step === 1 && (
@@ -162,7 +157,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
           </div>
         )}
 
-        {/* ================= ÉTAPE 2 : L'AMBIANCE ================= */}
+        {/* ================= ÉTAPE 2 : RYTHME & BUDGET ================= */}
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -183,36 +178,12 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                 </select>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-3">Qu'est-ce qui vous fait vibrer ?</label>
-              <div className="flex flex-wrap gap-2">
-                {AVAILABLE_INTERESTS.map(interest => {
-                  const isSelected = currentInterests.includes(interest.id);
-                  return (
-                    <button
-                      key={interest.id}
-                      type="button"
-                      onClick={() => toggleInterest(interest.id)}
-                      className={`px-5 py-2.5 rounded-full border text-sm transition-all ${
-                        isSelected ? 'bg-[#FF4D4D] text-white border-[#FF4D4D] scale-105 shadow-sm' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
-                      }`}
-                    >
-                      {interest.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.interests && <span className="text-red-500 text-xs block mt-2">{errors.interests.message}</span>}
-            </div>
           </div>
         )}
 
-        {/* ================= ÉTAPE 3 : SANTÉ ================= */}
+        {/* ================= ÉTAPE 3 : SANTÉ & PRÉCISIONS ================= */}
         {step === 3 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-            
-            {/* Section Alimentation */}
             <div className="space-y-4">
               <label className="block text-sm font-medium">Restrictions alimentaires</label>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -221,7 +192,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     key={option.id}
                     type="button"
                     onClick={() => toggleArrayItem("dietaryOptions", option.id, currentDietary)}
-                    className={`px-4 py-2 rounded-full border text-sm transition-all ${
+                    className={`px-4 py-2 rounded-full border text-sm transition-all cursor-pointer ${
                       currentDietary.includes(option.id) ? 'bg-[#FF4D4D] text-white border-[#FF4D4D]' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
                     }`}
                   >
@@ -237,7 +208,6 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
               />
             </div>
 
-            {/* Section Médical */}
             <div className="space-y-4 pt-4 border-t">
               <label className="block text-sm font-medium">Conditions médicales</label>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -246,7 +216,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                     key={option.id}
                     type="button"
                     onClick={() => toggleArrayItem("medicalOptions", option.id, currentMedical)}
-                    className={`px-4 py-2 rounded-full border text-sm transition-all ${
+                    className={`px-4 py-2 rounded-full border text-sm transition-all cursor-pointer ${
                       currentMedical.includes(option.id) ? 'bg-[#FF4D4D] text-white border-[#FF4D4D]' : 'bg-white text-[#555] border-[#ddd] hover:bg-[#faf8f6]'
                     }`}
                   >
@@ -261,7 +231,6 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
                 className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition"
               />
             </div>
-
           </div>
         )}
 
@@ -271,7 +240,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             type="button" 
             onClick={handlePrev}
             disabled={step === 1}
-            className={`px-6 py-3 font-medium rounded-lg transition-colors ${step === 1 ? 'invisible' : 'text-[#888] hover:bg-[#F2EDE8]'}`}
+            className={`px-6 py-3 font-medium rounded-lg transition-colors cursor-pointer ${step === 1 ? 'invisible' : 'text-[#888] hover:bg-[#F2EDE8]'}`}
           >
             Retour
           </button>
@@ -280,7 +249,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <button 
               type="button" 
               onClick={handleNext}
-              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 transition"
+              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 transition cursor-pointer"
             >
               Suivant
             </button>
@@ -288,7 +257,7 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
             <button 
               type="submit" 
               disabled={isLoading}
-              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 disabled:opacity-50 transition"
+              className="px-8 py-3 bg-[#FF4D4D] text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:brightness-105 active:scale-95 disabled:opacity-50 transition cursor-pointer"
             >
               {isLoading ? "Génération..." : "Terminer ✨"}
             </button>
