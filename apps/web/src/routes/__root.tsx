@@ -14,7 +14,7 @@ function RootLayout() {
         <header className="sticky top-0 z-50 border-b border-[#ddd] bg-[#F2EDE8]/90 backdrop-blur-md px-4 py-3 sm:px-8">
           <div className="mx-auto flex max-w-4xl items-center justify-between">
             <Link
-              to="/discovery"
+              to="/"
               className="text-xl font-black tracking-tight text-[#1a1a1a] hover:opacity-80 transition"
             >
               Voyagr<span className="text-[#FF4D4D]">.</span>

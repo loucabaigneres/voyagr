@@ -1,30 +1,30 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import React, { useState } from 'react';
-import { z } from 'zod';
-import { authClient } from '../lib/auth-client';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import React, { useState } from 'react'
+import { z } from 'zod'
+import { authClient } from '../lib/auth-client'
 
 const registerSearchSchema = z.object({
   redirect: z.string().optional(),
-});
+})
 
 export const Route = createFileRoute('/register')({
   validateSearch: (search) => registerSearchSchema.parse(search),
   component: RegisterPage,
-});
-  
+})
+
 function RegisterPage() {
-  const { redirect } = Route.useSearch();
-  const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { redirect } = Route.useSearch()
+  const navigate = useNavigate()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
     await authClient.signUp.email({
       name,
@@ -33,18 +33,18 @@ function RegisterPage() {
       fetchOptions: {
         onSuccess: () => {
           if (redirect) {
-            navigate({ to: redirect });
+            navigate({ to: redirect })
           } else {
-            navigate({ to: '/profile' });
+            navigate({ to: '/onboarding' })
           }
         },
         onError: (ctx) => {
-          setError(ctx.error.message);
-          setLoading(false);
+          setError(ctx.error.message)
+          setLoading(false)
         },
       },
-    });
-  };
+    })
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-8 bg-[#F2EDE8]">
@@ -113,5 +113,5 @@ function RegisterPage() {
         </p>
       </div>
     </div>
-  );
+  )
 }

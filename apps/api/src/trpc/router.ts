@@ -8,6 +8,7 @@ import { inspirationRouter } from './routers/inspiration.js';
 import { itineraryRouter } from './routers/itinerary.js';
 import { userRouter } from './routers/user.js';
 import { tripFormSchema } from './schemas/trip.js';
+import { onboardingRouter } from './routers/onboarding.js';
 
 export const appRouter = createTRPCRouter({
   // Example route that requires authentication
@@ -157,9 +158,8 @@ export const appRouter = createTRPCRouter({
   }),
 
   user: userRouter,
-
-  // Import d'inspirations depuis TikTok / Instagram
   inspiration: inspirationRouter,
+  onboarding: onboardingRouter,
 });
 
 export type AppRouter = typeof appRouter;

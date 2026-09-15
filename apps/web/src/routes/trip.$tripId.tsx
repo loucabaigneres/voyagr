@@ -204,27 +204,42 @@ function TripPage() {
 
         {/* ── Sauvegarde ── */}
         {!isFinalized || !isOwner ? (
-          <button
-            type="button"
-            onClick={handleSaveTrip}
-            disabled={isSavingTrip}
-            className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#FF4D4D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50"
-          >
-            {session?.user ? (
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 4.5h12a1 1 0 0 1 1 1v14l-7-3.5L5 19.5v-14a1 1 0 0 1 1-1Z" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" />
-              </svg>
+          <div>
+            <button
+              type="button"
+              onClick={handleSaveTrip}
+              disabled={isSavingTrip}
+              className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#FF4D4D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50"
+            >
+              {session?.user ? (
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 4.5h12a1 1 0 0 1 1 1v14l-7-3.5L5 19.5v-14a1 1 0 0 1 1-1Z" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" />
+                </svg>
+              )}
+              {isSavingTrip
+                ? 'Enregistrement…'
+                : session?.user
+                  ? 'Enregistrer dans mon profil'
+                  : 'Se connecter pour enregistrer'}
+            </button>
+
+            {!session?.user && (
+              <p className="mt-3 text-center text-xs text-[#888]">
+                Pas encore de compte ?{' '}
+                <Link
+                  to="/register"
+                  search={{ redirect: `/trip/${tripId}` }}
+                  className="font-bold text-[#FF4D4D] hover:underline"
+                >
+                  Créer un compte
+                </Link>
+              </p>
             )}
-            {isSavingTrip
-              ? 'Enregistrement…'
-              : session?.user
-                ? 'Enregistrer dans mon profil'
-                : 'Se connecter pour enregistrer'}
-          </button>
+          </div>
         ) : (
           <p className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-[rgba(46,204,113,.3)] bg-[rgba(46,204,113,.12)] px-4 py-2.5 text-xs font-semibold text-[#27ae60]">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24" aria-hidden>
