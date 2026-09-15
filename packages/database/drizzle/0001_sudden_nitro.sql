@@ -1,0 +1,1 @@
+ALTER TABLE "imported_inspiration" ADD COLUMN "description" text;

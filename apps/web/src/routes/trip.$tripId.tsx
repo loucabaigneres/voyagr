@@ -6,6 +6,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { inferRouterOutputs } from '@trpc/server'
 import { useEffect, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
+import { TripMap } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
 import { trpc } from '../lib/trpc.js'
@@ -325,7 +326,11 @@ function TripPage() {
               </PDFDownloadLink>
             </div>
 
-            <div className="mt-3 flex flex-col gap-4">
+            <div className="mt-3">
+              <TripMap days={itineraryDays} />
+            </div>
+
+            <div className="mt-4 flex flex-col gap-4">
               {itineraryDays.map((day) => (
                 <DayCard key={day.id} day={day} />
               ))}
