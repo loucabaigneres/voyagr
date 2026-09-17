@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 
 import type { inferRouterOutputs } from '@trpc/server'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
+import { ReplacePlaceModal } from '../components/ReplacePlaceModal'
 import { TripMap } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
@@ -53,9 +54,24 @@ function TripPage() {
     }),
   )
 
-  const chooseHotelMutation = useMutation(
-    trpc.discovery.chooseHotel.mutationOptions({
-      onSuccess: () => tripQuery.refetch(),
+  /** Place whose replacement pop-up is open. */
+  const [replacing, setReplacing] = useState<Activity | null>(null)
+  const closeReplace = useCallback(() => setReplacing(null), [])
+  const { refetch: refetchTrip } = tripQuery
+  const handleReplaced = useCallback(() => {
+    setReplacing(null)
+    refetchTrip()
+  }, [refetchTrip])
+
+  /** Planning being edited; `null` outside edit mode. */
+  const [draft, setDraft] = useState<Day[] | null>(null)
+
+  const updatePlanningMutation = useMutation(
+    trpc.discovery.updatePlanning.mutationOptions({
+      onSuccess: async () => {
+        await tripQuery.refetch()
+        setDraft(null)
+      },
     }),
   )
 
@@ -129,7 +145,26 @@ function TripPage() {
   // hotels; neither belongs in the day-by-day planning.
   const itineraryDays = days.filter((d) => d.dayIndex > 0)
   const likedDay = days.find((d) => d.dayIndex === 0)
-  const alternativeHotels = days.find((d) => d.dayIndex === -1)?.activities ?? []
+  const isEditing = draft !== null
+  const shownDays = draft ?? itineraryDays
+
+  const startEditing = () => {
+    updatePlanningMutation.reset()
+    setDraft(
+      itineraryDays.map((d) => ({
+        ...d,
+        activities: [...d.activities].sort((a, b) => a.orderIndex - b.orderIndex),
+      })),
+    )
+  }
+
+  const saveDraft = () => {
+    if (!draft) return
+    updatePlanningMutation.mutate({
+      tripId,
+      days: draft.map((d) => ({ dayId: d.id, activityIds: d.activities.map((a) => a.id) })),
+    })
+  }
 
   const plannedCount = itineraryDays.reduce((total, day) => total + day.activities.length, 0)
   // Cover photo: first itinerary place that has one, else a liked place.
@@ -322,76 +357,99 @@ function TripPage() {
               <h2 className="text-xs font-bold uppercase tracking-wider text-[#888]">
                 Jour par jour
               </h2>
-              <PDFDownloadLink
-                document={<TripPdfDocument trip={trip} days={days} />}
-                fileName={`${trip.destination ?? 'voyage'}-itineraire.pdf`}
-              >
-                {({ loading }) => (
+              {!isEditing && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={loading}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-95 disabled:opacity-50"
+                    onClick={startEditing}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-95"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m15.2 5.2 3.6 3.6M4 20l4.2-.9L19.4 7.9a1.8 1.8 0 0 0 0-2.6l-.7-.7a1.8 1.8 0 0 0-2.6 0L4.9 15.8 4 20Z" />
                     </svg>
-                    {loading ? 'Préparation…' : 'PDF'}
+                    Modifier le planning
                   </button>
-                )}
-              </PDFDownloadLink>
+                  <PDFDownloadLink
+                    document={<TripPdfDocument trip={trip} days={days} />}
+                    fileName={`${trip.destination ?? 'voyage'}-itineraire.pdf`}
+                  >
+                    {({ loading }) => (
+                      <button
+                        type="button"
+                        disabled={loading}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-95 disabled:opacity-50"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" />
+                        </svg>
+                        {loading ? 'Préparation…' : 'PDF'}
+                      </button>
+                    )}
+                  </PDFDownloadLink>
+                </div>
+              )}
             </div>
 
+            {isEditing && (
+              <p className="mt-3 rounded-2xl border border-[rgba(255,77,77,.25)] bg-[rgba(255,77,77,.08)] px-4 py-3 text-xs leading-relaxed text-[#555]">
+                Réordonne, déplace ou supprime des lieux, puis enregistre. L'hébergement est commun
+                à tout le séjour : utilise « Changer » hors édition pour le remplacer.
+              </p>
+            )}
+
             <div className="mt-3">
-              <TripMap days={itineraryDays} />
+              <TripMap days={shownDays} />
             </div>
 
             <div className="mt-4 flex flex-col gap-4">
-              {itineraryDays.map((day) => (
-                <DayCard key={day.id} day={day} />
+              {shownDays.map((day) => (
+                <DayCard
+                  key={day.id}
+                  day={day}
+                  onReplace={isEditing ? undefined : setReplacing}
+                  edit={
+                    draft
+                      ? {
+                          days: draft,
+                          onMove: (activityId, offset) =>
+                            setDraft((d) => d && moveWithinDay(d, day.id, activityId, offset)),
+                          onMoveToDay: (activityId, targetDayId) =>
+                            setDraft((d) => d && moveToDay(d, day.id, activityId, targetDayId)),
+                          onRemove: (activityId) =>
+                            setDraft((d) => d && removeFromDay(d, day.id, activityId)),
+                        }
+                      : undefined
+                  }
+                />
               ))}
             </div>
 
-            {alternativeHotels.length > 0 && (
-              <>
-                <h2 className="mt-8 text-xs font-bold uppercase tracking-wider text-[#888]">
-                  Autres hôtels à proximité
-                </h2>
-                <div className="mt-3 overflow-hidden rounded-[28px] border border-[#eee] bg-white shadow-sm">
-                  <p className="border-b border-[#f0eae3] px-4 py-3 text-xs text-[#888]">
-                    Choisis-en un pour remplacer l'hébergement de ton itinéraire.
-                  </p>
-                  <div className="space-y-2.5 bg-[#FBF8F5] p-3">
-                    {alternativeHotels.map((hotel, idx) => (
-                      <ActivityRow
-                        key={hotel.id}
-                        activity={hotel}
-                        index={idx}
-                        action={
-                          <button
-                            type="button"
-                            onClick={() =>
-                              chooseHotelMutation.mutate({ tripId, activityId: hotel.id })
-                            }
-                            disabled={chooseHotelMutation.isPending}
-                            className="cursor-pointer rounded-full border border-[#FF4D4D] px-3.5 py-1.5 text-xs font-semibold text-[#FF4D4D] transition hover:bg-[#FF4D4D] hover:text-white active:scale-95 disabled:opacity-50"
-                          >
-                            {chooseHotelMutation.isPending &&
-                            chooseHotelMutation.variables?.activityId === hotel.id
-                              ? 'Changement…'
-                              : 'Choisir cet hôtel'}
-                          </button>
-                        }
-                      />
-                    ))}
-                  </div>
-                  {chooseHotelMutation.isError && (
-                    <p className="px-4 py-3 text-xs font-medium text-[#FF4D4D]">
-                      {(chooseHotelMutation.error as { message?: string })?.message ??
-                        "Impossible de changer d'hôtel."}
-                    </p>
-                  )}
+            {isEditing && (
+              <div className="sticky bottom-3 z-[1100] mt-4 rounded-[24px] border border-[#eee] bg-white/95 p-3 shadow-[0_12px_32px_-12px_rgba(26,26,26,0.35)] backdrop-blur-md">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDraft(null)}
+                    disabled={updatePlanningMutation.isPending}
+                    className="flex-1 cursor-pointer rounded-full border border-[#ddd] bg-white px-4 py-3 text-sm font-semibold text-[#1a1a1a] transition hover:border-[#1a1a1a] active:scale-[0.98] disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveDraft}
+                    disabled={updatePlanningMutation.isPending}
+                    className="flex-1 cursor-pointer rounded-full bg-[#FF4D4D] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+                  >
+                    {updatePlanningMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
                 </div>
-              </>
+                {updatePlanningMutation.isError && (
+                  <p className="mt-2 text-center text-xs font-medium text-[#FF4D4D]">
+                    {updatePlanningMutation.error.message || "Impossible d'enregistrer le planning."}
+                  </p>
+                )}
+              </div>
             )}
           </>
         )}
@@ -405,19 +463,79 @@ function TripPage() {
           </div>
         )}
       </div>
+
+      {replacing && (
+        <ReplacePlaceModal
+          tripId={tripId}
+          place={replacing}
+          onClose={closeReplace}
+          onReplaced={handleReplaced}
+        />
+      )}
     </div>
   )
 }
 
-function DayCard({ day }: { day: Day }) {
+// ─── Draft editing ────────────────────────────────────────────────────────────
+
+/** Moves a place one step up (`-1`) or down (`+1`) inside its day. */
+function moveWithinDay(days: Day[], dayId: string, activityId: string, offset: -1 | 1): Day[] {
+  return days.map((day) => {
+    if (day.id !== dayId) return day
+    const from = day.activities.findIndex((a) => a.id === activityId)
+    const to = from + offset
+    if (from < 0 || to < 0 || to >= day.activities.length) return day
+    const activities = [...day.activities]
+    ;[activities[from], activities[to]] = [activities[to]!, activities[from]!]
+    return { ...day, activities }
+  })
+}
+
+/** Moves a place to the end of another day. */
+function moveToDay(days: Day[], fromDayId: string, activityId: string, toDayId: string): Day[] {
+  if (fromDayId === toDayId) return days
+  const moved = days.find((d) => d.id === fromDayId)?.activities.find((a) => a.id === activityId)
+  if (!moved) return days
+  return days.map((day) => {
+    if (day.id === fromDayId) return { ...day, activities: day.activities.filter((a) => a.id !== activityId) }
+    if (day.id === toDayId) return { ...day, activities: [...day.activities, moved] }
+    return day
+  })
+}
+
+function removeFromDay(days: Day[], dayId: string, activityId: string): Day[] {
+  return days.map((day) =>
+    day.id === dayId ? { ...day, activities: day.activities.filter((a) => a.id !== activityId) } : day,
+  )
+}
+
+type DayEditControls = {
+  days: Day[]
+  onMove: (activityId: string, offset: -1 | 1) => void
+  onMoveToDay: (activityId: string, targetDayId: string) => void
+  onRemove: (activityId: string) => void
+}
+
+function DayCard({
+  day,
+  onReplace,
+  edit,
+}: {
+  day: Day
+  /** Opens the replacement pop-up; omitted while editing. */
+  onReplace?: (activity: Activity) => void
+  /** Present in edit mode only. */
+  edit?: DayEditControls
+}) {
   const [isOpen, setIsOpen] = useState(true)
 
   const activities = day.activities.filter((a) => a.category === 'activité')
   const restaurants = day.activities.filter((a) => a.category === 'restaurant')
 
   // The planner emits each day as a real route (hotel → matin → déjeuner →
-  // après-midi → dîner), so `orderIndex` is the order to display.
-  const ordered = [...day.activities].sort((a, b) => a.orderIndex - b.orderIndex)
+  // après-midi → dîner), so `orderIndex` is the order to display. A draft is
+  // already in its edited order.
+  const ordered = edit ? day.activities : [...day.activities].sort((a, b) => a.orderIndex - b.orderIndex)
 
   const summary = [
     activities.length > 0 && `${activities.length} activité${activities.length > 1 ? 's' : ''}`,
@@ -465,7 +583,34 @@ function DayCard({ day }: { day: Day }) {
       {isOpen && (
         <div className="space-y-2.5 border-t border-[#f0eae3] bg-[#FBF8F5] p-3">
           {ordered.map((act, idx) => (
-            <ActivityRow key={act.id} activity={act} index={idx} />
+            <ActivityRow
+              key={act.id}
+              activity={act}
+              index={idx}
+              action={
+                edit ? (
+                  <EditControls
+                    activity={act}
+                    day={day}
+                    days={edit.days}
+                    isFirst={idx === 0}
+                    isLast={idx === ordered.length - 1}
+                    controls={edit}
+                  />
+                ) : onReplace ? (
+                  <button
+                    type="button"
+                    onClick={() => onReplace(act)}
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-[#ddd] px-3 py-1 text-xs font-semibold text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-95"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h13l-3-3M20 17H7l3 3" />
+                    </svg>
+                    Changer
+                  </button>
+                ) : undefined
+              }
+            />
           ))}
           {ordered.length === 0 && (
             <p className="rounded-2xl border border-[#eee] bg-white px-4 py-3 text-xs text-[#888]">
@@ -475,6 +620,192 @@ function DayCard({ day }: { day: Day }) {
         </div>
       )}
     </div>
+  )
+}
+
+const iconButton =
+  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[#ddd] bg-white text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-90 disabled:cursor-default disabled:opacity-35 disabled:hover:border-[#ddd] disabled:hover:text-[#555]'
+
+function EditControls({
+  activity,
+  day,
+  days,
+  isFirst,
+  isLast,
+  controls,
+}: {
+  activity: Activity
+  day: Day
+  days: Day[]
+  isFirst: boolean
+  isLast: boolean
+  controls: DayEditControls
+}) {
+  const locked = activity.category === 'hotel'
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => controls.onMove(activity.id, -1)}
+        disabled={isFirst}
+        aria-label="Monter"
+        className={iconButton}
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m5 15 7-7 7 7" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => controls.onMove(activity.id, 1)}
+        disabled={isLast}
+        aria-label="Descendre"
+        className={iconButton}
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
+        </svg>
+      </button>
+
+      {locked ? (
+        <span className="text-[11px] font-medium text-[#aaa]">Commun à tout le séjour</span>
+      ) : (
+        <>
+          {days.length > 1 && (
+            <MoveToDayMenu
+              targets={days.filter((d) => d.id !== day.id)}
+              onPick={(targetDayId) => controls.onMoveToDay(activity.id, targetDayId)}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => controls.onRemove(activity.id)}
+            aria-label="Supprimer"
+            className={`${iconButton} hover:bg-[#FF4D4D] hover:text-white`}
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M10 11v6m4-6v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" />
+            </svg>
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * "Déplacer vers…" dropdown styled like the rest of the page.
+ *
+ * The menu is positioned `fixed` from the trigger's rect: day cards clip their
+ * overflow, so an absolutely positioned menu would be cut on the last rows.
+ */
+function MoveToDayMenu({ targets, onPick }: { targets: Day[]; onPick: (dayId: string) => void }) {
+  const [anchor, setAnchor] = useState<{ left: number; top?: number; bottom?: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+
+  useEffect(() => {
+    if (!anchor) return
+    const close = () => setAnchor(null)
+    const onPointer = (e: PointerEvent) => {
+      const target = e.target as Node
+      if (!menuRef.current?.contains(target) && !triggerRef.current?.contains(target)) close()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        close()
+        triggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', onPointer)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    menuRef.current?.querySelector('button')?.focus()
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [anchor])
+
+  const toggle = () => {
+    if (anchor) return setAnchor(null)
+    const rect = triggerRef.current!.getBoundingClientRect()
+    const menuWidth = 208
+    const left = Math.max(16, Math.min(rect.left, window.innerWidth - menuWidth - 16))
+    // Open upwards when the trigger sits in the lower half of the screen.
+    setAnchor(
+      rect.bottom > window.innerHeight / 2
+        ? { left, bottom: window.innerHeight - rect.top + 6 }
+        : { left, top: rect.bottom + 6 },
+    )
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={anchor !== null}
+        aria-controls={anchor ? menuId : undefined}
+        className={`inline-flex h-8 cursor-pointer items-center gap-1 rounded-full border bg-white pl-3 pr-2 text-xs font-semibold transition active:scale-95 ${
+          anchor ? 'border-[#FF4D4D] text-[#FF4D4D]' : 'border-[#ddd] text-[#555] hover:border-[#FF4D4D] hover:text-[#FF4D4D]'
+        }`}
+      >
+        Déplacer vers…
+        <svg
+          className={`h-3.5 w-3.5 transition-transform ${anchor ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          viewBox="0 0 24 24"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {anchor && (
+        <div
+          ref={menuRef}
+          id={menuId}
+          role="menu"
+          style={{ left: anchor.left, top: anchor.top, bottom: anchor.bottom }}
+          className="fixed z-[2000] max-h-64 w-52 overflow-y-auto rounded-2xl border border-[#eee] bg-white p-1.5 shadow-[0_18px_40px_-16px_rgba(26,26,26,0.4)] [scrollbar-width:thin]"
+        >
+          <p className="px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-wider text-[#aaa]">
+            Déplacer vers
+          </p>
+          {targets.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setAnchor(null)
+                onPick(d.id)
+              }}
+              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left outline-none transition hover:bg-[#FBF3EF] focus-visible:bg-[#FBF3EF]"
+            >
+              <span className="inline-flex h-6 items-center rounded-full bg-[#FF4D4D] px-2.5 text-[11px] font-bold text-white">
+                Jour {d.dayIndex}
+              </span>
+              <span className="truncate text-[11px] font-medium text-[#888]">
+                {d.targetDate
+                  ? formatDate(d.targetDate)
+                  : `${d.activities.length} lieu${d.activities.length > 1 ? 'x' : ''}`}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   )
 }
 
