@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
+import { PinIcon } from '../components/PinIcon'
 import type { RouterOutputs } from '../lib/trpc'
 import { trpc } from '../lib/trpc'
 
@@ -451,9 +452,7 @@ function DiscoveryPage() {
 
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5">
                     <div className="flex items-center gap-1.5 text-[13px] font-medium text-white/85">
-                      <svg className="h-4 w-4 shrink-0 text-[#FF4D4D]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                      </svg>
+                      <PinIcon className="h-4 w-4 shrink-0 text-[#FF4D4D]" />
                       <span className="truncate">{[item.city, item.country].filter(Boolean).join(', ')}</span>
                     </div>
                     <h2 className="mt-1 line-clamp-2 text-[26px] font-bold leading-[1.15] text-white">
@@ -735,9 +734,7 @@ function DetailSheet({
             <header>
               {place && (
                 <p className="flex items-center gap-1.5 text-sm font-medium text-[#FF4D4D]">
-                  <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                  </svg>
+                  <PinIcon className="h-4 w-4 shrink-0" />
                   {place}
                 </p>
               )}

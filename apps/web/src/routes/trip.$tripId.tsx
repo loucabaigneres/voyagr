@@ -6,6 +6,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { inferRouterOutputs } from '@trpc/server'
 import { useEffect, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
+import { PinIcon } from '../components/PinIcon'
 import { TripMap } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
@@ -26,15 +27,6 @@ const CATEGORY_META: Record<string, { emoji: string; label: string; color: strin
 
 function categoryMeta(cat: string | null) {
   return CATEGORY_META[cat ?? ''] ?? { emoji: '📍', label: cat ?? '', color: 'rgba(0,0,0,.05)' }
-}
-
-/** Same pin as the swipe card, so both views share one visual vocabulary. */
-function PinIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
-    </svg>
-  )
 }
 
 function TripPage() {
