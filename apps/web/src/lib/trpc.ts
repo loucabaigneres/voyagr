@@ -6,11 +6,13 @@ import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 // So that we avoid bundling unnecessary server-side code into the client bundle.
 import type { AppRouter } from '@voyagr/api/src/trpc/router';
 import { env } from '../env';
+import { isClientError } from './errors';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false, // Disable refetching on window focus
+      retry: (failureCount, error) => !isClientError(error) && failureCount < 3,
     },
   },
 });

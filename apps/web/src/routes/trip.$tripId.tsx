@@ -4,12 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 
 import type { inferRouterOutputs } from '@trpc/server'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
+import { ErrorBanner } from '../components/ErrorBanner'
 import { PinIcon } from '../components/PinIcon'
 import { TripMap } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
+import { errorMessage, isClientError } from '../lib/errors'
 import { trpc } from '../lib/trpc.js'
 
 export const Route = createFileRoute('/trip/$tripId')({ component: TripPage })
@@ -51,7 +53,7 @@ function TripPage() {
     }),
   )
 
-  const { mutate: saveToProfile, isPending: isSavingTrip } = useMutation(
+  const saveMutation = useMutation(
     trpc.user.saveTripToAccount.mutationOptions({
       onSuccess: () => {
         tripQuery.refetch()
@@ -63,16 +65,18 @@ function TripPage() {
     }),
   )
 
+  const { mutate: saveToProfile, isPending: isSavingTrip } = saveMutation
+
+  // One automatic attempt per trip: retrying on every settle looped forever
+  // whenever the save failed.
+  const autoSavedFor = useRef<string | null>(null)
   useEffect(() => {
-    if (
-      session?.user &&
-      tripQuery.data?.trip &&
-      tripQuery.data.trip.userId !== session.user.id &&
-      !isSavingTrip
-    ) {
+    if (autoSavedFor.current === tripId) return
+    if (session?.user && tripQuery.data?.trip && tripQuery.data.trip.userId !== session.user.id) {
+      autoSavedFor.current = tripId
       saveToProfile({ tripId })
     }
-  }, [session?.user, tripQuery.data?.trip, tripId, saveToProfile, isSavingTrip])
+  }, [session?.user, tripQuery.data?.trip, tripId, saveToProfile])
 
   if (tripQuery.isPending) {
     return (
@@ -86,17 +90,51 @@ function TripPage() {
   }
 
   if (tripQuery.isError) {
+    // A bad or unknown id won't fix itself; anything else is worth a retry.
+    const notFound = isClientError(tripQuery.error)
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F2EDE8] px-4">
-        <div className="flex w-full max-w-[520px] flex-col items-center gap-3 rounded-[28px] border border-[#eee] bg-white px-8 py-14 text-center shadow-sm">
-          <span className="text-4xl" aria-hidden>🧳</span>
-          <p className="text-sm font-semibold text-[#1a1a1a]">Voyage introuvable.</p>
-          <Link
-            to="/discovery"
-            className="mt-1 rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95"
+        <div
+          role="alert"
+          className="flex w-full max-w-[520px] flex-col items-center rounded-[28px] border border-[#eee] bg-white px-8 py-12 text-center shadow-sm"
+        >
+          <span
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(255,77,77,.1)] text-3xl"
+            aria-hidden
           >
-            Retour à la découverte
-          </Link>
+            {notFound ? '🧳' : '📡'}
+          </span>
+          <h1 className="mt-4 text-lg font-bold text-[#1a1a1a]">
+            {notFound ? 'Voyage introuvable' : 'Impossible de charger ton voyage'}
+          </h1>
+          <p className="mt-1.5 max-w-[320px] text-sm leading-relaxed text-[#888]">
+            {notFound
+              ? "Ce lien ne correspond à aucun voyage. Il a peut-être été supprimé, ou l'adresse est incomplète."
+              : errorMessage(tripQuery.error, 'Le serveur a rencontré un problème. Réessaie dans un instant.')}
+          </p>
+
+          <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            {!notFound && (
+              <button
+                type="button"
+                onClick={() => tripQuery.refetch()}
+                disabled={tripQuery.isFetching}
+                className="cursor-pointer rounded-full bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95 disabled:opacity-60"
+              >
+                {tripQuery.isFetching ? 'Nouvelle tentative…' : 'Réessayer'}
+              </button>
+            )}
+            <Link
+              to="/discovery"
+              className={`rounded-full px-6 py-3 text-sm font-semibold transition active:scale-95 ${
+                notFound
+                  ? 'bg-[#FF4D4D] text-white shadow-lg shadow-red-500/25 hover:brightness-105'
+                  : 'border border-[#ddd] bg-white text-[#1a1a1a] hover:border-[#FF4D4D]'
+              }`}
+            >
+              Retour à la découverte
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -220,6 +258,16 @@ function TripPage() {
                   : 'Se connecter pour enregistrer'}
             </button>
 
+            {saveMutation.isError && (
+              <ErrorBanner
+                className="mt-3"
+                message={errorMessage(saveMutation.error, "Ton voyage n'a pas pu être enregistré.")}
+                onRetry={() => saveToProfile({ tripId })}
+                retrying={isSavingTrip}
+                onDismiss={() => saveMutation.reset()}
+              />
+            )}
+
             {!session?.user && (
               <p className="mt-3 text-center text-xs text-[#888]">
                 Pas encore de compte ?{' '}
@@ -299,10 +347,12 @@ function TripPage() {
             </button>
 
             {generateMutation.isError && (
-              <p className="mt-2.5 text-center text-xs font-medium text-[#FF4D4D]">
-                {(generateMutation.error as { message?: string })?.message ??
-                  'Erreur lors de la génération.'}
-              </p>
+              <ErrorBanner
+                className="mt-3"
+                message={errorMessage(generateMutation.error, "La génération de l'itinéraire a échoué.")}
+                onRetry={() => generateMutation.mutate({ tripId })}
+                retrying={generateMutation.isPending}
+              />
             )}
           </div>
         )}
@@ -377,10 +427,11 @@ function TripPage() {
                     ))}
                   </div>
                   {chooseHotelMutation.isError && (
-                    <p className="px-4 py-3 text-xs font-medium text-[#FF4D4D]">
-                      {(chooseHotelMutation.error as { message?: string })?.message ??
-                        "Impossible de changer d'hôtel."}
-                    </p>
+                    <ErrorBanner
+                      className="m-3 mt-0"
+                      message={errorMessage(chooseHotelMutation.error, "Impossible de changer d'hôtel.")}
+                      onDismiss={() => chooseHotelMutation.reset()}
+                    />
                   )}
                 </div>
               </>
