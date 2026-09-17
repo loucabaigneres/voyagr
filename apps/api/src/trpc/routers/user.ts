@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { swipes, trip, user } from '../../lib/tables.js';
 import { createTRPCRouter, publicProcedure } from '../init.js';
@@ -95,6 +95,24 @@ export const userRouter = createTRPCRouter({
         });
       }
 
+      const [current] = await ctx.db
+        .select({ ownerId: trip.userId, ownerAccount: user.id })
+        .from(trip)
+        .leftJoin(user, eq(user.id, trip.userId))
+        .where(eq(trip.id, input.tripId));
+
+      if (!current) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Voyage introuvable.' });
+      }
+
+      // Only guest trips can change hands; an account's trip stays with it.
+      if (current.ownerAccount && current.ownerId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Ce voyage appartient à un autre compte.',
+        });
+      }
+
       const [updatedTrip] = await ctx.db
         .update(trip)
         .set({
@@ -102,11 +120,15 @@ export const userRouter = createTRPCRouter({
           status: 'finalized',
           updatedAt: new Date(),
         })
-        .where(eq(trip.id, input.tripId))
+        // Re-checking the owner guards against a concurrent claim.
+        .where(and(eq(trip.id, input.tripId), eq(trip.userId, current.ownerId)))
         .returning();
 
       if (!updatedTrip) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Voyage introuvable.' });
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: "Ce voyage vient d'être enregistré par un autre compte.",
+        });
       }
 
       return { success: true, trip: updatedTrip };

@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Context } from '../context.js';
 
-import { activity, discoveryContent, trip, tripDay } from '../../lib/tables.js';
+import { activity, discoveryContent, trip, tripDay, user } from '../../lib/tables.js';
 import { calcNumDays, geoDistItem, parseWkt, planItinerary } from '../../lib/itinerary/planner.js';
 import type { AveragePrice, GeoPoint, Intensity, ItinItem } from '../../lib/itinerary/planner.js';
 import { publicProcedure } from '../init.js';
@@ -173,10 +173,19 @@ export const itineraryRouter = {
       }
 
       const days = [...dayMap.values()].sort((a, b) => a.dayIndex - b.dayIndex);
+
+      // Guest trips carry 'guest' or a client-side guest id rather than an
+      // account id; only those may be claimed by whoever signs in.
+      const [owner] = await ctx.db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.id, tripRow.userId));
+
       return {
         trip: tripRow,
         days,
         isGenerated: days.some((d) => d.dayIndex > 0),
+        ownedByAccount: owner !== undefined,
       };
     }),
 

@@ -40,7 +40,14 @@ function TripPage() {
   const queryClient = useQueryClient()
   const { data: session } = authClient.useSession()
 
-  const [showSavedBanner, setShowSavedBanner] = useState(false)
+  // 'claimed': a guest trip picked up right after signing in.
+  const [savedNotice, setSavedNotice] = useState<'saved' | 'claimed' | null>(null)
+
+  useEffect(() => {
+    if (!savedNotice) return
+    const id = setTimeout(() => setSavedNotice(null), 5000)
+    return () => clearTimeout(id)
+  }, [savedNotice])
 
   const tripQuery = useQuery(trpc.discovery.getTrip.queryOptions({ tripId }))
 
@@ -58,28 +65,28 @@ function TripPage() {
 
   const saveMutation = useMutation(
     trpc.user.saveTripToAccount.mutationOptions({
-      onSuccess: () => {
-        tripQuery.refetch()
+      // Awaiting the refetch keeps the button busy until the page shows the
+      // saved state, instead of flashing back to "Enregistrer".
+      onSuccess: async () => {
         queryClient.invalidateQueries(trpc.user.getProfile.queryFilter())
         queryClient.invalidateQueries(trpc.user.getTrips.queryFilter())
-        setShowSavedBanner(true)
-        setTimeout(() => setShowSavedBanner(false), 5000)
+        await tripQuery.refetch()
       },
     }),
   )
 
   const { mutate: saveToProfile, isPending: isSavingTrip } = saveMutation
 
-  // One automatic attempt per trip: retrying on every settle looped forever
-  // whenever the save failed.
+  // Claim a guest trip once the visitor is signed in. One attempt per trip:
+  // retrying on every settle looped forever whenever the save failed.
   const autoSavedFor = useRef<string | null>(null)
   useEffect(() => {
     if (autoSavedFor.current === tripId) return
-    if (session?.user && tripQuery.data?.trip && tripQuery.data.trip.userId !== session.user.id) {
+    if (session?.user && tripQuery.data && !tripQuery.data.ownedByAccount) {
       autoSavedFor.current = tripId
-      saveToProfile({ tripId })
+      saveToProfile({ tripId }, { onSuccess: () => setSavedNotice('claimed') })
     }
-  }, [session?.user, tripQuery.data?.trip, tripId, saveToProfile])
+  }, [session?.user, tripQuery.data, tripId, saveToProfile])
 
   if (tripQuery.isPending) {
     return (
@@ -143,9 +150,16 @@ function TripPage() {
     )
   }
 
-  const { trip, days, isGenerated } = tripQuery.data
-  const isOwner = session?.user && trip.userId === session.user.id
+  const { trip, days, isGenerated, ownedByAccount } = tripQuery.data
+  const isOwner = !!session?.user && trip.userId === session.user.id
   const isFinalized = trip.status === 'finalized'
+  // Signed-out visitors keep the sign-in button: they may be the owner.
+  const saveState: 'saved' | 'foreign' | 'savable' =
+    isOwner && isFinalized
+      ? 'saved'
+      : session?.user && ownedByAccount && !isOwner
+        ? 'foreign'
+        : 'savable'
 
   const handleSaveTrip = () => {
     if (!session?.user) {
@@ -155,7 +169,7 @@ function TripPage() {
       })
       return
     }
-    saveToProfile({ tripId })
+    saveToProfile({ tripId }, { onSuccess: () => setSavedNotice('saved') })
   }
 
   // Day 0 holds the places liked while swiping and day -1 the alternative
@@ -247,15 +261,21 @@ function TripPage() {
         />
 
         {/* ── Sauvegarde ── */}
-        {!isFinalized || !isOwner ? (
+        {saveState === 'savable' && (
           <div>
             <button
               type="button"
               onClick={handleSaveTrip}
               disabled={isSavingTrip}
-              className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#FF4D4D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50"
+              aria-busy={isSavingTrip}
+              className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#FF4D4D] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
             >
-              {session?.user ? (
+              {isSavingTrip ? (
+                <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity=".3" strokeWidth="3" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              ) : session?.user ? (
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 4.5h12a1 1 0 0 1 1 1v14l-7-3.5L5 19.5v-14a1 1 0 0 1 1-1Z" />
                 </svg>
@@ -265,7 +285,7 @@ function TripPage() {
                 </svg>
               )}
               {isSavingTrip
-                ? 'Enregistrement…'
+                ? 'Enregistrement en cours…'
                 : session?.user
                   ? 'Enregistrer dans mon profil'
                   : 'Se connecter pour enregistrer'}
@@ -275,7 +295,7 @@ function TripPage() {
               <ErrorBanner
                 className="mt-3"
                 message={errorMessage(saveMutation.error, "Ton voyage n'a pas pu être enregistré.")}
-                onRetry={() => saveToProfile({ tripId })}
+                onRetry={handleSaveTrip}
                 retrying={isSavingTrip}
                 onDismiss={() => saveMutation.reset()}
               />
@@ -294,25 +314,51 @@ function TripPage() {
               </p>
             )}
           </div>
-        ) : (
-          <p className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-[rgba(46,204,113,.3)] bg-[rgba(46,204,113,.12)] px-4 py-2.5 text-xs font-semibold text-[#27ae60]">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+        )}
+
+        {saveState === 'saved' && (
+          <div className="mt-4 flex items-center justify-between gap-2 rounded-full border border-[rgba(46,204,113,.3)] bg-[rgba(46,204,113,.12)] py-2 pl-4 pr-2 text-xs font-semibold text-[#27ae60]">
+            <span className="flex items-center gap-1.5">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+              </svg>
+              Sauvegardé dans ton profil
+            </span>
+            <Link
+              to="/profile"
+              className="shrink-0 rounded-full bg-white px-3 py-1 text-[#27ae60] transition hover:bg-[#27ae60] hover:text-white"
+            >
+              Voir mon profil
+            </Link>
+          </div>
+        )}
+
+        {saveState === 'foreign' && (
+          <p className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-[#e5ded6] bg-white px-4 py-2.5 text-xs font-semibold text-[#888]">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+              <circle cx="12" cy="8" r="3.5" />
+              <path strokeLinecap="round" d="M5 20a7 7 0 0 1 14 0" />
             </svg>
-            Sauvegardé dans ton profil
+            Voyage partagé par un autre voyageur
           </p>
         )}
 
-        {/* Notification de confirmation */}
-        {showSavedBanner && (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(46,204,113,.3)] bg-[#e8f8f0] p-4 text-sm font-semibold text-[#27ae60] shadow-sm">
+        {savedNotice && (
+          <div
+            role="status"
+            className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(46,204,113,.3)] bg-[#e8f8f0] p-4 text-sm font-semibold text-[#27ae60] shadow-sm"
+          >
             <span className="flex items-center gap-2">
               <span aria-hidden>🎉</span>
-              <span>Te voilà connecté ! Ton voyage a été enregistré dans ton profil.</span>
+              <span>
+                {savedNotice === 'claimed'
+                  ? 'Te voilà connecté ! Ton voyage a été enregistré dans ton profil.'
+                  : 'Voyage enregistré dans ton profil.'}
+              </span>
             </span>
             <button
               type="button"
-              onClick={() => setShowSavedBanner(false)}
+              onClick={() => setSavedNotice(null)}
               className="shrink-0 cursor-pointer rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#27ae60] transition hover:bg-white"
             >
               Fermer
