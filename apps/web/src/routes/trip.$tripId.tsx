@@ -15,6 +15,7 @@ import { TripDetails } from '../components/TripDetails'
 import { TripMap } from '../components/TripMap'
 import type { TripMapHandle } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
+import { TripStatusBadge } from '../components/TripStatusBadge'
 import { authClient } from '../lib/auth-client'
 import { formatDate, formatPeriod } from '../lib/dates'
 import { daySlots } from '../lib/daySlots'
@@ -214,7 +215,7 @@ function TripPage() {
                 </svg>
                 Retour
               </button>
-              <StatusBadge status={trip.status} />
+              <TripStatusBadge status={trip.status} variant="onImage" />
             </div>
 
             <div className="absolute inset-x-0 bottom-0 p-5">
@@ -546,21 +547,5 @@ function DayCard({ day, onShowOnMap }: { day: Day; onShowOnMap: (activityId: str
         </div>
       )}
     </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string | null }) {
-  const dots: Record<string, string> = {
-    draft:     'bg-white/70',
-    finalized: 'bg-[#2ecc71]',
-    archived:  'bg-[#FF4D4D]',
-  }
-  const labels: Record<string, string> = { draft: 'Brouillon', finalized: 'Finalisé', archived: 'Archivé' }
-  const s = status ?? 'draft'
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md">
-      <span className={`h-1.5 w-1.5 rounded-full ${dots[s] ?? dots['draft']}`} aria-hidden />
-      {labels[s] ?? s}
-    </span>
   )
 }

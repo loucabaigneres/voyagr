@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { InspirationList } from '../components/InspirationList';
+import { TripStatusBadge } from '../components/TripStatusBadge';
 import { authClient } from '../lib/auth-client';
 import { trpc } from '../lib/trpc';
 
@@ -156,15 +157,16 @@ function ProfilePage() {
                   params={{ tripId: item.id }}
                   className="flex items-center justify-between rounded-2xl bg-white p-5 border border-[#eee] shadow-sm hover:border-[#FF4D4D]/50 transition active:scale-[0.99]"
                 >
-                  <div>
-                    <h3 className="font-bold text-[#1a1a1a]">
-                      {item.title || `Voyage à ${item.destination}`}
+                  <div className="min-w-0">
+                    <h3 className="truncate font-bold text-[#1a1a1a]">
+                      {item.title ||
+                        (item.destination ? `Voyage à ${item.destination}` : 'Nouveau voyage')}
                     </h3>
-                    <p className="mt-0.5 text-xs text-[#888]">Destination : {item.destination}</p>
+                    <p className="mt-0.5 text-xs text-[#888]">
+                      {item.destination ? `Destination : ${item.destination}` : 'Destination à choisir'}
+                    </p>
                   </div>
-                  <span className="rounded-full bg-[#fee] px-3.5 py-1 text-xs font-bold text-[#FF4D4D] capitalize">
-                    {item.status}
-                  </span>
+                  <TripStatusBadge status={item.status} />
                 </Link>
               ))
             ) : (
