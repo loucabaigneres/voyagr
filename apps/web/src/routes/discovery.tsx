@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
@@ -97,6 +97,9 @@ function DiscoveryPage() {
   const [detail, setDetail] = useState<DiscoveryItem | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [photoIndex, setPhotoIndex] = useState(0)
+  // Cards already visible behind the top one when a swipe starts; re-ranking
+  // must not swap them out from under the user.
+  const [pinnedIds, setPinnedIds] = useState<string[]>([])
 
   // Swipes are tracked client-side; the recommendation runs over them on demand.
   const recommendationQuery = useQuery({
@@ -110,6 +113,9 @@ function DiscoveryPage() {
   const rankCitiesQuery = useQuery({
     ...trpc.discovery.rankCities.queryOptions({ swipes: history }),
     enabled: explorationComplete,
+    // Every swipe changes the key; without this the ranking is briefly
+    // undefined and the deck falls back to the raw feed order.
+    placeholderData: keepPreviousData,
   })
 
   const swipedIds = useMemo(() => new Set(history.map((s) => s.id)), [history])
@@ -123,8 +129,14 @@ function DiscoveryPage() {
     const scoreOf = Object.fromEntries(cityRanks.map((r) => [r.city, r.score]))
     const vetoed = new Set(cityRanks.filter((r) => r.vetoed).map((r) => r.city))
 
-    const alreadySeen = feed.filter((item) => swipedIds.has(item.id))
-    const unseen = feed.filter((item) => !swipedIds.has(item.id))
+    // Swipe order, not feed order: `cursor` lags `history` by one during the
+    // leave animation, so the card at `cursor` must still be the one leaving.
+    const byId = new Map(feed.map((item) => [item.id, item]))
+    const alreadySeen = history.flatMap((s) => byId.get(s.id) ?? [])
+
+    const pinned = pinnedIds.flatMap((id) => (swipedIds.has(id) ? [] : (byId.get(id) ?? [])))
+    const pinnedSet = new Set(pinned.map((item) => item.id))
+    const unseen = feed.filter((item) => !swipedIds.has(item.id) && !pinnedSet.has(item.id))
 
     // Cards matching revealed preferences (positive score, not vetoed).
     const personalized = unseen
@@ -153,8 +165,8 @@ function DiscoveryPage() {
       }
     }
 
-    return [...alreadySeen, ...remaining]
-  }, [feed, explorationComplete, rankCitiesQuery.data, swipedIds])
+    return [...alreadySeen, ...pinned, ...remaining]
+  }, [feed, explorationComplete, rankCitiesQuery.data, swipedIds, history, pinnedIds])
 
   // Persisting the recommended trip to the database (on explicit click).
   const saveTrip = useMutation(
@@ -181,6 +193,7 @@ function DiscoveryPage() {
       const viewDurationMs = Date.now() - shownAtRef.current
 
       setHistory((h) => [...h, { id: topItem.id, liked, viewDurationMs }])
+      setPinnedIds(stack.slice(1).map((item) => item.id))
 
       const nextLikes = liked ? likes + 1 : likes
       if (liked) setLikes(nextLikes)
@@ -197,7 +210,7 @@ function DiscoveryPage() {
         }
       }, 300)
     },
-    [topItem, leaving, likes, triggerResult],
+    [topItem, stack, leaving, likes, triggerResult],
   )
 
   // ── Keyboard ──
@@ -270,6 +283,7 @@ function DiscoveryPage() {
     setLikes(0)
     setSkips(0)
     setHistory([])
+    setPinnedIds([])
     setPhotoIndex(0)
     setShowResult(false)
     setDetail(null)
