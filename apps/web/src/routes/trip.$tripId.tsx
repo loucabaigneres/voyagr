@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PinIcon } from '../components/PinIcon'
+import { TripCover } from '../components/TripCover'
 import { TripMap } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
@@ -162,11 +163,20 @@ function TripPage() {
   const alternativeHotels = days.find((d) => d.dayIndex === -1)?.activities ?? []
 
   const plannedCount = itineraryDays.reduce((total, day) => total + day.activities.length, 0)
-  // Cover photo: first itinerary place that has one, else a liked place.
-  const heroImage =
-    itineraryDays.flatMap((d) => d.activities).find((a) => a.mainMediaUrl)?.mainMediaUrl ??
-    likedDay?.activities.find((a) => a.mainMediaUrl)?.mainMediaUrl ??
-    null
+  // Cover candidates, best first. Sights come before hotels and restaurants:
+  // each day opens on its hotel, which made a room photo the cover of every trip.
+  const sightsFirst = (acts: Activity[]) => [
+    ...acts.filter((a) => a.category === 'activité'),
+    ...acts.filter((a) => a.category !== 'activité'),
+  ]
+  const coverUrls = [
+    ...new Set(
+      [
+        ...sightsFirst(itineraryDays.flatMap((d) => d.activities)),
+        ...sightsFirst(likedDay?.activities ?? []),
+      ].flatMap((a) => (a.mainMediaUrl ? [a.mainMediaUrl] : [])),
+    ),
+  ]
 
   return (
     <div className="min-h-screen bg-[#F2EDE8] text-[#1a1a1a]">
@@ -174,15 +184,7 @@ function TripPage() {
         {/* ── Hero ── */}
         <div className="relative overflow-hidden rounded-[28px] bg-[#1a1a1a] shadow-[0_24px_50px_-24px_rgba(26,26,26,0.55)]">
           <div className="relative h-[260px] w-full">
-            {heroImage ? (
-              <img src={heroImage} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-white/15">
-                <svg className="h-16 w-16" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75 3.75 9v10.5L9 17.25m0-10.5 6 2.5m-6-2.5v10.5m6-8 5.25-2.25V15L15 17.25m0-10.5v10.5m0 0-6-2.5" />
-                </svg>
-              </div>
-            )}
+            <TripCover urls={coverUrls} />
 
             <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/50 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
