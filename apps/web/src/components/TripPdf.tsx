@@ -1,5 +1,6 @@
 import { Document, Image, Link, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { env } from '../env'
+import { parseLocalDate } from '../lib/dates'
 
 // ─── Types (mirrors getTrip output) ──────────────────────────────────────────
 
@@ -45,7 +46,7 @@ function parseCoords(wkt: string | null): string | null {
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
+  return parseLocalDate(dateStr).toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

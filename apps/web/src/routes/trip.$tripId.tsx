@@ -9,9 +9,11 @@ import type { AppRouter } from '../../../api/src/trpc/router'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PinIcon } from '../components/PinIcon'
 import { TripCover } from '../components/TripCover'
+import { TripDetails } from '../components/TripDetails'
 import { TripMap } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
+import { formatDate, formatPeriod } from '../lib/dates'
 import { errorMessage, isClientError } from '../lib/errors'
 import { trpc } from '../lib/trpc.js'
 
@@ -162,7 +164,10 @@ function TripPage() {
   const likedDay = days.find((d) => d.dayIndex === 0)
   const alternativeHotels = days.find((d) => d.dayIndex === -1)?.activities ?? []
 
-  const plannedCount = itineraryDays.reduce((total, day) => total + day.activities.length, 0)
+  // The hotel is repeated on every day it covers, so count places, not rows.
+  const placeCount = new Set(
+    itineraryDays.flatMap((d) => d.activities.map((a) => a.discoveryContentId ?? a.title)),
+  ).size
   // Cover candidates, best first. Sights come before hotels and restaurants:
   // each day opens on its hotel, which made a room photo the cover of every trip.
   const sightsFirst = (acts: Activity[]) => [
@@ -217,7 +222,7 @@ function TripPage() {
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {trip.startDate && (
                   <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
-                    {formatDate(trip.startDate)}
+                    {formatPeriod(trip.startDate, trip.durationDays ?? 1)}
                   </span>
                 )}
                 {trip.durationDays ? (
@@ -225,15 +230,21 @@ function TripPage() {
                     {trip.durationDays} jour{trip.durationDays > 1 ? 's' : ''}
                   </span>
                 ) : null}
-                {plannedCount > 0 && (
+                {placeCount > 0 && (
                   <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
-                    {plannedCount} étape{plannedCount > 1 ? 's' : ''}
+                    {placeCount} lieu{placeCount > 1 ? 'x' : ''}
                   </span>
                 )}
               </div>
             </div>
           </div>
         </div>
+
+        <TripDetails
+          numberOfPeople={trip.numberOfPeople}
+          intensity={trip.intensity}
+          averagePrice={trip.averagePrice}
+        />
 
         {/* ── Sauvegarde ── */}
         {!isFinalized || !isOwner ? (
@@ -615,14 +626,6 @@ function StatusBadge({ status }: { status: string | null }) {
       {labels[s] ?? s}
     </span>
   )
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
 }
 
 function cleanDesc(desc: string): string {
