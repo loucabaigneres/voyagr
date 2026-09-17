@@ -1,1 +1,30 @@
 @import 'tailwindcss';
+
+/* ── TripMap markers ── */
+
+/* Leaflet positions the marker box itself with a transform, so the hover
+   scale goes on the inner svg to leave that positioning untouched. */
+.tm-pin svg {
+  transition: transform 0.15s ease, filter 0.15s ease;
+  transform-origin: center;
+}
+
+.tm-pin:hover svg {
+  transform: scale(1.15);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.18));
+}
+
+.leaflet-tooltip.tm-tooltip {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: #fff;
+  font: 600 12px/1.3 inherit;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.leaflet-tooltip-top.tm-tooltip::before {
+  border-top-color: #1a1a1a;
+}

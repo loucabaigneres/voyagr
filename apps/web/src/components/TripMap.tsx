@@ -85,7 +85,7 @@ function makeIcon(category: string | null, active = false) {
   // its tip.
   return L.divIcon({
     html:        svg,
-    className:   '',
+    className:   'tm-pin',
     iconSize:    [w, w],
     iconAnchor:  [w / 2, w / 2],
     popupAnchor: [0, -w / 2],
@@ -195,8 +195,18 @@ export function TripMap({ days }: TripMapProps) {
 
         bounds.push(coords)
 
-        const marker = L.marker(coords, { icon: makeIcon(act.category) }).addTo(map)
+        const marker = L.marker(coords, { icon: makeIcon(act.category), riseOnHover: true }).addTo(map)
         markersRef.current.set(act.id, { marker, dayIndex: day.dayIndex, category: act.category })
+
+        // Built as a text node: titles come from scraped data and must not be
+        // parsed as HTML.
+        const label = document.createElement('span')
+        label.textContent = act.locationName ?? act.title
+        marker.bindTooltip(label, {
+          direction: 'top',
+          offset:    [0, -18],
+          className: 'tm-tooltip',
+        })
 
         marker.on('click', () => {
           setActivePin((prev) =>
