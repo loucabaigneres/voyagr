@@ -1,16 +1,34 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { TripFormValues } from '../lib/validations/trip';
 import { DIETARY_OPTIONS, MEDICAL_OPTIONS, tripFormSchema } from '../lib/validations/trip';
 
+export interface DestinationOption {
+  city: string;
+  country: string | null;
+}
+
 interface TripFormProps {
+  /** Destination picked by the swipe flow; the field is then read-only. */
   initialDestination?: string;
+  /** Cities the user can choose from when no destination is known yet. */
+  destinationOptions?: DestinationOption[];
+  /** Trip to resume in the swipe flow from the "no idea" link. */
+  tripId?: string;
   onSubmit: (data: TripFormValues) => void;
   isLoading?: boolean;
 }
 
-export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = false }: TripFormProps) {
+export function TripForm({
+  initialDestination = "",
+  destinationOptions,
+  tripId,
+  onSubmit,
+  isLoading = false,
+}: TripFormProps) {
+  const destinationLocked = initialDestination !== "";
   const [step, setStep] = useState(1);
   const totalSteps = 3;
 
@@ -118,8 +136,38 @@ export function TripForm({ initialDestination = "Paris", onSubmit, isLoading = f
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Destination</label>
-                <input {...register("destination")} readOnly className="w-full border border-[#ddd] p-3 rounded-xl bg-[#F2EDE8] text-[#888]" />
+                <label htmlFor="trip-destination" className="block text-sm font-medium mb-1">Destination</label>
+                {destinationLocked ? (
+                  <input id="trip-destination" {...register("destination")} readOnly className="w-full border border-[#ddd] p-3 rounded-xl bg-[#F2EDE8] text-[#888]" />
+                ) : (
+                  <>
+                    <select
+                      id="trip-destination"
+                      {...register("destination")}
+                      disabled={!destinationOptions}
+                      className="w-full border border-[#ddd] p-3 rounded-xl bg-white focus:border-[#FF4D4D] focus:ring-2 focus:ring-[#FF4D4D]/20 outline-none transition disabled:bg-[#F2EDE8] disabled:text-[#888]"
+                    >
+                      <option value="">
+                        {destinationOptions ? "Choisis une destination" : "Chargement des destinations…"}
+                      </option>
+                      {destinationOptions?.map(({ city, country }) => (
+                        <option key={city} value={city}>
+                          {country ? `${city} (${country})` : city}
+                        </option>
+                      ))}
+                    </select>
+                    {tripId && (
+                      <Link
+                        to="/discovery"
+                        search={{ tripId }}
+                        className="mt-1.5 inline-block text-xs font-semibold text-[#FF4D4D] hover:underline"
+                      >
+                        Pas d'idée ? Swipe pour trouver ta destination
+                      </Link>
+                    )}
+                  </>
+                )}
+                {errors.destination && <span className="block text-red-500 text-xs">{errors.destination.message}</span>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Date de départ</label>
