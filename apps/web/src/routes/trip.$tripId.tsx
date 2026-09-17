@@ -6,15 +6,18 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { inferRouterOutputs } from '@trpc/server'
 import { useEffect, useRef, useState } from 'react'
 import type { AppRouter } from '../../../api/src/trpc/router'
+import { ActivityRow } from '../components/ActivityRow'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { GenerationPanel } from '../components/GenerationPanel'
 import { PinIcon } from '../components/PinIcon'
 import { TripCover } from '../components/TripCover'
 import { TripDetails } from '../components/TripDetails'
 import { TripMap } from '../components/TripMap'
+import type { TripMapHandle } from '../components/TripMap'
 import { TripPdfDocument } from '../components/TripPdf'
 import { authClient } from '../lib/auth-client'
 import { formatDate, formatPeriod } from '../lib/dates'
+import { daySlots } from '../lib/daySlots'
 import { errorMessage, isClientError } from '../lib/errors'
 import { trpc } from '../lib/trpc.js'
 
@@ -24,16 +27,6 @@ type RouterOutputs = inferRouterOutputs<AppRouter>
 type TripData = RouterOutputs['discovery']['getTrip']
 type Day = TripData['days'][number]
 type Activity = Day['activities'][number]
-
-const CATEGORY_META: Record<string, { emoji: string; label: string; color: string }> = {
-  hotel:      { emoji: '🏨', label: 'Hébergement', color: 'rgba(255,77,77,.12)' },
-  'activité': { emoji: '🗺️', label: 'Activité',    color: 'rgba(46,204,113,.12)' },
-  restaurant: { emoji: '🍽️', label: 'Restaurant',  color: 'rgba(255,160,60,.14)' },
-}
-
-function categoryMeta(cat: string | null) {
-  return CATEGORY_META[cat ?? ''] ?? { emoji: '📍', label: cat ?? '', color: 'rgba(0,0,0,.05)' }
-}
 
 function TripPage() {
   const { tripId } = Route.useParams()
@@ -51,6 +44,7 @@ function TripPage() {
   }, [savedNotice])
 
   const tripQuery = useQuery(trpc.discovery.getTrip.queryOptions({ tripId }))
+  const mapHandle = useRef<TripMapHandle>(null)
 
   const generateMutation = useMutation(
     trpc.discovery.generateItinerary.mutationOptions({
@@ -417,12 +411,16 @@ function TripPage() {
             </div>
 
             <div className="mt-3">
-              <TripMap days={itineraryDays} />
+              <TripMap ref={mapHandle} days={itineraryDays} />
             </div>
 
             <div className="mt-4 flex flex-col gap-4">
               {itineraryDays.map((day) => (
-                <DayCard key={day.id} day={day} />
+                <DayCard
+                  key={day.id}
+                  day={day}
+                  onShowOnMap={(activityId) => mapHandle.current?.focus(activityId)}
+                />
               ))}
             </div>
 
@@ -436,11 +434,10 @@ function TripPage() {
                     Choisis-en un pour remplacer l'hébergement de ton itinéraire.
                   </p>
                   <div className="space-y-2.5 bg-[#FBF8F5] p-3">
-                    {alternativeHotels.map((hotel, idx) => (
+                    {alternativeHotels.map((hotel) => (
                       <ActivityRow
                         key={hotel.id}
                         activity={hotel}
-                        index={idx}
                         action={
                           <button
                             type="button"
@@ -472,20 +469,12 @@ function TripPage() {
           </>
         )}
 
-        {generateMutation.isPending && (
-          <div className="mt-4 flex flex-col items-center gap-2 rounded-[28px] border border-[#eee] bg-white px-8 py-10 text-center shadow-sm">
-            <span className="animate-pulse text-4xl" aria-hidden>✨</span>
-            <p className="text-sm font-semibold text-[#888]">
-              Analyse de tes préférences et optimisation géographique…
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )
 }
 
-function DayCard({ day }: { day: Day }) {
+function DayCard({ day, onShowOnMap }: { day: Day; onShowOnMap: (activityId: string) => void }) {
   const [isOpen, setIsOpen] = useState(true)
 
   const activities = day.activities.filter((a) => a.category === 'activité')
@@ -494,6 +483,7 @@ function DayCard({ day }: { day: Day }) {
   // The planner emits each day as a real route (hotel → matin → déjeuner →
   // après-midi → dîner), so `orderIndex` is the order to display.
   const ordered = [...day.activities].sort((a, b) => a.orderIndex - b.orderIndex)
+  const slots = daySlots(ordered)
 
   const summary = [
     activities.length > 0 && `${activities.length} activité${activities.length > 1 ? 's' : ''}`,
@@ -540,8 +530,13 @@ function DayCard({ day }: { day: Day }) {
 
       {isOpen && (
         <div className="space-y-2.5 border-t border-[#f0eae3] bg-[#FBF8F5] p-3">
-          {ordered.map((act, idx) => (
-            <ActivityRow key={act.id} activity={act} index={idx} />
+          {ordered.map((act) => (
+            <ActivityRow
+              key={act.id}
+              activity={act}
+              slot={slots.get(act.id)}
+              onShowOnMap={act.coordinates ? () => onShowOnMap(act.id) : undefined}
+            />
           ))}
           {ordered.length === 0 && (
             <p className="rounded-2xl border border-[#eee] bg-white px-4 py-3 text-xs text-[#888]">
@@ -550,84 +545,6 @@ function DayCard({ day }: { day: Day }) {
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-function ActivityRow({
-  activity,
-  index,
-  action,
-}: {
-  activity: Activity
-  index: number
-  /** Optional control rendered under the description (e.g. "choose this hotel"). */
-  action?: React.ReactNode
-}) {
-  const meta = categoryMeta(activity.category)
-  const desc = activity.description ? cleanDesc(activity.description) : null
-
-  return (
-    <div className="flex gap-3 rounded-2xl border border-[#eee] bg-white p-3 transition hover:border-[#FF4D4D]">
-      <div className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-xl">
-        {activity.mainMediaUrl ? (
-          <img
-            src={activity.mainMediaUrl}
-            alt={activity.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className="flex h-full w-full items-center justify-center text-2xl"
-            style={{ background: meta.color }}
-            aria-hidden
-          >
-            {meta.emoji}
-          </div>
-        )}
-        <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/45 text-[10px] font-bold text-white backdrop-blur-md">
-          {index + 1}
-        </span>
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[15px] font-semibold leading-tight text-[#1a1a1a]">{activity.title}</p>
-          <span
-            className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#555]"
-            style={{ background: meta.color }}
-          >
-            {meta.label}
-          </span>
-        </div>
-
-        {activity.locationName && activity.locationName !== activity.title && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-[#888]">
-            <PinIcon className="h-3.5 w-3.5 shrink-0 text-[#FF4D4D]" />
-            <span className="truncate">{activity.locationName}</span>
-          </p>
-        )}
-
-        {desc && (
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#999]">{desc}</p>
-        )}
-
-        {activity.sourceUrl && (
-          <a
-            href={activity.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#FF4D4D] hover:underline"
-          >
-            Voir l'offre
-            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-        )}
-
-        {action && <div className="mt-2">{action}</div>}
-      </div>
     </div>
   )
 }
@@ -646,8 +563,4 @@ function StatusBadge({ status }: { status: string | null }) {
       {labels[s] ?? s}
     </span>
   )
-}
-
-function cleanDesc(desc: string): string {
-  return desc.replace(/\*\*/g, '').replace(/\*/g, '').trim()
 }

@@ -1,5 +1,6 @@
 import L from 'leaflet'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { PinIcon } from './PinIcon'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -147,11 +148,17 @@ function FilterChip({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-interface TripMapProps {
-  days: Day[]
+export interface TripMapHandle {
+  /** Selects an activity's marker, clearing filters that would hide it, and scrolls the map into view. */
+  focus: (activityId: string) => void
 }
 
-export function TripMap({ days }: TripMapProps) {
+interface TripMapProps {
+  days: Day[]
+  ref?: Ref<TripMapHandle>
+}
+
+export function TripMap({ days, ref }: TripMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef       = useRef<L.Map | null>(null)
   const markersRef   = useRef<Map<string, MarkerMeta>>(new Map())
@@ -159,6 +166,26 @@ export function TripMap({ days }: TripMapProps) {
   const [activePin,         setActivePin]         = useState<ActivePin | null>(null)
   const [selectedDay,       setSelectedDay]       = useState<number | null>(null)
   const [selectedCategory,  setSelectedCategory]  = useState<string | null>(null)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus(activityId) {
+        const entry = markersRef.current.get(activityId)
+        const day = days.find((d) => d.activities.some((a) => a.id === activityId))
+        const activity = day?.activities.find((a) => a.id === activityId)
+        if (!entry || !day || !activity) return
+
+        setSelectedDay(null)
+        setSelectedCategory(null)
+        setActivePin({ activity, dayIndex: day.dayIndex })
+        const map = mapRef.current
+        map?.setView(entry.marker.getLatLng(), Math.max(map.getZoom(), 15), { animate: true })
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      },
+    }),
+    [days],
+  )
 
   const allDayIndexes = [...new Set(days.map((d) => d.dayIndex))].sort((a, b) => a - b)
   const allCategories = [
