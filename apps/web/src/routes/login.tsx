@@ -1,29 +1,29 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import React, { useState } from 'react';
-import { z } from 'zod';
-import { authClient } from '../lib/auth-client';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import React, { useState } from 'react'
+import { z } from 'zod'
+import { authClient } from '../lib/auth-client'
 
 const loginSearchSchema = z.object({
   redirect: z.string().optional(),
-});
+})
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search) => loginSearchSchema.parse(search),
   component: LoginPage,
-});
+})
 
 function LoginPage() {
-  const { redirect } = Route.useSearch();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { redirect } = Route.useSearch()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
     await authClient.signIn.email({
       email,
@@ -31,18 +31,18 @@ function LoginPage() {
       fetchOptions: {
         onSuccess: () => {
           if (redirect) {
-            navigate({ to: redirect });
+            navigate({ to: redirect })
           } else {
-            navigate({ to: '/profile' });
+            navigate({ to: '/profile' })
           }
         },
         onError: (ctx) => {
-          setError(ctx.error.message);
-          setLoading(false);
+          setError(ctx.error.message)
+          setLoading(false)
         },
       },
-    });
-  };
+    })
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-8 bg-[#F2EDE8]">
@@ -100,5 +100,5 @@ function LoginPage() {
         </p>
       </div>
     </div>
-  );
+  )
 }

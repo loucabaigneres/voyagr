@@ -1,10 +1,23 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { z } from 'zod'
 import type { RouterOutputs } from '../lib/trpc'
 import { trpc } from '../lib/trpc'
 
-export const Route = createFileRoute('/discovery')({ component: DiscoveryPage })
+const discoverySearchSchema = z.object({
+  tripId: z.string().optional(),
+})
+
+export const Route = createFileRoute('/discovery')({
+  validateSearch: (search: Record<string, unknown>) => discoverySearchSchema.parse(search),
+  beforeLoad: ({ search }) => {
+    if (!search.tripId) {
+      throw redirect({ to: '/onboarding' })
+    }
+  },
+  component: DiscoveryPage,
+})
 
 // ─── Types derived from the tRPC router (single source of truth) ───────────────
 type RecommendationOutput = RouterOutputs['discovery']['recommendation']
@@ -69,6 +82,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function DiscoveryPage() {
   const navigate = useNavigate()
+  const { tripId } = Route.useSearch()
 
   const feedQuery = useQuery(trpc.discovery.feed.queryOptions())
   const feed = feedQuery.data ?? []
@@ -142,12 +156,10 @@ function DiscoveryPage() {
   }, [feed, explorationComplete, rankCitiesQuery.data, swipedIds])
 
   // Persisting the recommended trip to the database (on explicit click).
-  // The trip is a draft at this point (destination + liked places only) —
-  // send the user to the configure form to fill in dates/budget/pace before generating.
   const saveTrip = useMutation(
     trpc.discovery.saveTrip.mutationOptions({
       onSuccess: (data) => {
-        navigate({ to: '/trip/configure', search: { tripId: data.tripId } })
+        navigate({ to: '/trip/configure', search: { tripId: data.tripId ?? tripId } })
       },
     }),
   )
@@ -395,7 +407,6 @@ function DiscoveryPage() {
                   onPointerUp={isTop ? onPointerUp : undefined}
                   onPointerCancel={isTop ? onPointerCancel : undefined}
                 >
-                  {/* Fallback shown if the photo can't be loaded */}
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-white/15">
                     <svg className="h-16 w-16" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden>
                       <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -415,11 +426,9 @@ function DiscoveryPage() {
                     className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                   />
 
-                  {/* Readability gradients */}
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
-                  {/* Top: photo indicators + category */}
                   <div className="pointer-events-none absolute inset-x-0 top-0 p-3">
                     {photos.length > 1 && (
                       <div className="flex gap-1" aria-hidden>
@@ -440,7 +449,6 @@ function DiscoveryPage() {
                     )}
                   </div>
 
-                  {/* Bottom: place info */}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5">
                     <div className="flex items-center gap-1.5 text-[13px] font-medium text-white/85">
                       <svg className="h-4 w-4 shrink-0 text-[#FF4D4D]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -611,7 +619,6 @@ function DetailSheet({
   const place = [item.city, item.country].filter(Boolean).join(', ')
   const offerHost = hostnameOf(item.url)
 
-  // Lock the page behind the sheet, and browse photos with the arrow keys.
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -648,7 +655,6 @@ function DetailSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none]">
-          {/* ── Gallery ── */}
           <div className="relative h-72 bg-[#1a1a1a] sm:h-80">
             <div
               ref={galleryRef}
@@ -725,7 +731,6 @@ function DetailSheet({
             )}
           </div>
 
-          {/* ── Content ── */}
           <div className="space-y-6 px-5 pb-6 pt-5">
             <header>
               {place && (
@@ -813,7 +818,6 @@ function DetailSheet({
           </div>
         </div>
 
-        {/* ── Actions (always visible) ── */}
         <div className="grid grid-cols-2 gap-3 border-t border-[#ddd]/70 bg-[#F2EDE8] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
           <button
             type="button"
@@ -841,7 +845,6 @@ function DetailSheet({
   )
 }
 
-/** Scrolls a snap gallery by one photo in the given direction. */
 function scrollGallery(el: HTMLDivElement | null, direction: 1 | -1) {
   if (!el || el.clientWidth === 0) return
   const current = Math.round(el.scrollLeft / el.clientWidth)
@@ -889,7 +892,6 @@ function ResultOverlay({
   const top: Destination | undefined = result?.destinations[0]
   const isReady = !!result && result.status === 'ok' && !!top
 
-  // Keep the page behind the sheet still.
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -966,7 +968,6 @@ function ResultOverlay({
         ) : (
           <>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none]">
-              {/* ── Hero ── */}
               <div className="relative h-72 bg-[#1a1a1a] sm:h-80">
                 {top.heroImage && (
                   <img src={top.heroImage} alt="" className="h-full w-full object-cover" />
@@ -987,7 +988,6 @@ function ResultOverlay({
                 </div>
               </div>
 
-              {/* ── Content ── */}
               <div className="space-y-6 px-5 pb-6 pt-5">
                 <MatchSummary confidence={result!.confidence} likes={likes} seen={likes + skips} />
 
@@ -1058,7 +1058,6 @@ function ResultOverlay({
               </div>
             </div>
 
-            {/* ── Actions (always visible) ── */}
             <div className="space-y-2 border-t border-[#ddd]/70 bg-[#F2EDE8] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
               {saveState.isError && (
                 <p role="alert" className="text-center text-xs font-semibold text-[#FF4D4D]">
@@ -1137,7 +1136,6 @@ function ResultState({
   )
 }
 
-/** `confidence` grows with the number of swipes: it tells how reliable the pick is. */
 function confidenceLabel(pct: number): string {
   if (pct >= 90) return 'Recommandation fiable'
   if (pct >= 50) return 'Tendance qui se confirme'
