@@ -1,11 +1,17 @@
 import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
-import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Context } from '../context.js';
 
 import { activity, discoveryContent, trip, tripDay } from '../../lib/tables.js';
-import { calcNumDays, geoDistItem, parseWkt, planItinerary } from '../../lib/itinerary/planner.js';
+import {
+  calcNumDays,
+  geoDistItem,
+  parseWkt,
+  planItinerary,
+  rankReplacements,
+} from '../../lib/itinerary/planner.js';
 import type { AveragePrice, GeoPoint, Intensity, ItinItem } from '../../lib/itinerary/planner.js';
 import { publicProcedure } from '../init.js';
 import { getCatalog } from './discovery.js';
@@ -22,6 +28,16 @@ async function fetchNearbyFromDb(
   city: string,
   anchor: GeoPoint,
   limit: number,
+): Promise<ItinItem[]> {
+  const items = await fetchCityItems(db, category, city);
+  return items.sort((a, b) => geoDistItem(a, anchor) - geoDistItem(b, anchor)).slice(0, limit);
+}
+
+/** Every active, geolocated place of one category in a city. */
+async function fetchCityItems(
+  db: Context['db'],
+  category: string,
+  city: string,
 ): Promise<ItinItem[]> {
   const rows = await db
     .select({
@@ -55,27 +71,70 @@ async function fetchNearbyFromDb(
       price: string | null;
       subcategory: string[] | null;
     }>
-  )
-    .map((r) => {
-      const coords = parseWkt(r.coordinates);
-      return {
-        activityId: `db:${r.id}`,
-        discoveryContentId: r.id,
-        title: r.locationName ?? r.title ?? 'Lieu',
-        locationName: r.locationName,
-        description: r.description,
-        coordinates: r.coordinates,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
-        mainMediaUrl: r.mainMediaUrl,
-        category,
-        price: r.price,
-        subcategory: Array.isArray(r.subcategory) ? r.subcategory : null,
-        liked: false,
-      };
+  ).map((r) => {
+    const coords = parseWkt(r.coordinates);
+    return {
+      activityId: `db:${r.id}`,
+      discoveryContentId: r.id,
+      title: r.locationName ?? r.title ?? 'Lieu',
+      locationName: r.locationName,
+      description: r.description,
+      coordinates: r.coordinates,
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
+      mainMediaUrl: r.mainMediaUrl,
+      category,
+      price: r.price,
+      subcategory: Array.isArray(r.subcategory) ? r.subcategory : null,
+      liked: false,
+    };
+  });
+}
+
+// ─── Planning edits ───────────────────────────────────────────────────────────
+
+/**
+ * Loads a place of the day-by-day planning, with its category.
+ *
+ * Scoping the lookup to this trip's planning days is what stops an arbitrary
+ * activity id from being read or rewritten through another trip.
+ */
+async function loadPlanningActivity(db: Context['db'], tripId: string, activityId: string) {
+  const [row] = await db
+    .select({
+      id: activity.id,
+      tripDayId: activity.tripDayId,
+      discoveryContentId: activity.discoveryContentId,
+      title: activity.title,
+      locationName: activity.locationName,
+      description: activity.description,
+      coordinates: activity.coordinates,
+      category: sql<string | null>`${discoveryContent.tags}->>'category'`,
     })
-    .sort((a, b) => geoDistItem(a, anchor) - geoDistItem(b, anchor))
-    .slice(0, limit);
+    .from(activity)
+    .innerJoin(tripDay, eq(activity.tripDayId, tripDay.id))
+    .leftJoin(discoveryContent, eq(activity.discoveryContentId, discoveryContent.id))
+    .where(and(eq(activity.id, activityId), eq(tripDay.tripId, tripId), gt(tripDay.dayIndex, 0)));
+
+  if (!row) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: "Ce lieu ne fait pas partie de l'itinéraire.",
+    });
+  }
+  if (!row.category) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Ce lieu ne peut pas être remplacé.',
+    });
+  }
+  return { ...row, category: row.category };
+}
+
+async function getTripOrThrow(db: Context['db'], tripId: string) {
+  const [tripRow] = await db.select().from(trip).where(eq(trip.id, tripId));
+  if (!tripRow) throw new TRPCError({ code: 'NOT_FOUND', message: 'Trip introuvable.' });
+  return tripRow;
 }
 
 // ─── Pool builder ─────────────────────────────────────────────────────────────
@@ -406,53 +465,163 @@ export const itineraryRouter = {
     }),
 
   /**
-   * Swaps the itinerary's hotel with one of the alternatives.
+   * Proposes places that could replace one of the planning, best first.
    *
-   * The two places trade positions: the picked alternative becomes the hotel of
-   * every planned day, and the outgoing hotel takes its slot in the alternatives
-   * list, so the choice stays reversible.
+   * Candidates share the replaced place's category and city. Activities already
+   * planned on any day, and restaurants already planned that same day, are left
+   * out; the hotel alternatives kept at generation time come first.
    */
-  chooseHotel: publicProcedure
+  getReplacementCandidates: publicProcedure
     .input(z.object({ tripId: z.string().uuid(), activityId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const tripRow = await getTripOrThrow(ctx.db, input.tripId);
+      const current = await loadPlanningActivity(ctx.db, input.tripId, input.activityId);
+
+      const [pool, planned] = await Promise.all([
+        fetchCityItems(ctx.db, current.category, tripRow.destination ?? ''),
+        ctx.db
+          .select({
+            discoveryContentId: activity.discoveryContentId,
+            tripDayId: activity.tripDayId,
+            dayIndex: tripDay.dayIndex,
+          })
+          .from(activity)
+          .innerJoin(tripDay, eq(activity.tripDayId, tripDay.id))
+          .where(and(eq(tripDay.tripId, input.tripId), ne(tripDay.dayIndex, LIKED_DAY_INDEX))),
+      ]);
+
+      const contentIds = (rows: typeof planned) =>
+        new Set(rows.map((r) => r.discoveryContentId).filter((id): id is string => id != null));
+
+      let excluded = new Set<string>();
+      let alternatives = new Set<string>();
+      if (current.category === 'activité') {
+        excluded = contentIds(planned.filter((r) => r.dayIndex > 0));
+      } else if (current.category === 'restaurant') {
+        excluded = contentIds(planned.filter((r) => r.tripDayId === current.tripDayId));
+      } else if (current.category === 'hotel') {
+        alternatives = contentIds(
+          planned.filter((r) => r.dayIndex === ALTERNATIVE_HOTELS_DAY_INDEX),
+        );
+      }
+
+      const coords = parseWkt(current.coordinates);
+      const currentItem: ItinItem = {
+        activityId: current.id,
+        discoveryContentId: current.discoveryContentId,
+        title: current.title,
+        locationName: current.locationName,
+        description: current.description,
+        coordinates: current.coordinates,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        mainMediaUrl: null,
+        category: current.category,
+        price: null,
+        subcategory: null,
+        liked: false,
+      };
+
+      const ranked = rankReplacements(
+        currentItem,
+        pool
+          .filter((i) => !excluded.has(i.discoveryContentId ?? ''))
+          .map((i) => ({ ...i, liked: alternatives.has(i.discoveryContentId ?? '') })),
+        {
+          averagePrice: (tripRow.averagePrice as AveragePrice | null) ?? null,
+          interests: Array.isArray(tripRow.interests) ? (tripRow.interests as string[]) : [],
+        },
+      );
+
+      return ranked.map((i) => ({
+        id: i.discoveryContentId!,
+        title: i.title,
+        locationName: i.locationName,
+        description: i.description,
+        mainMediaUrl: i.mainMediaUrl,
+        price: i.price,
+        category: i.category,
+        distanceKm: i.distanceKm,
+        /** One of the hotel alternatives proposed at generation time. */
+        suggested: i.liked,
+      }));
+    }),
+
+  /**
+   * Replaces one place of the planning with a place of the same category.
+   *
+   * The hotel is shared by the whole stay, so replacing it rewrites every day.
+   * When the new hotel was one of the alternatives, the outgoing hotel takes its
+   * slot there, so the choice stays reversible.
+   */
+  replaceActivity: publicProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        activityId: z.string().uuid(),
+        discoveryContentId: z.string().uuid(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
+      const tripRow = await getTripOrThrow(ctx.db, input.tripId);
+      const current = await loadPlanningActivity(ctx.db, input.tripId, input.activityId);
+
+      const [content] = await ctx.db
+        .select({
+          id: discoveryContent.id,
+          title: discoveryContent.title,
+          locationName: discoveryContent.locationName,
+          description: discoveryContent.description,
+          coordinates: discoveryContent.coordinates,
+          city: discoveryContent.city,
+          category: sql<string | null>`${discoveryContent.tags}->>'category'`,
+        })
+        .from(discoveryContent)
+        .where(
+          and(
+            eq(discoveryContent.id, input.discoveryContentId),
+            eq(discoveryContent.isActive, true),
+          ),
+        );
+
+      const sameCity = content?.city?.toLowerCase() === (tripRow.destination ?? '').toLowerCase();
+      if (!content || content.category !== current.category || !sameCity) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Ce lieu ne peut pas remplacer celui de ton itinéraire.',
+        });
+      }
+
+      const incoming = {
+        discoveryContentId: content.id,
+        title: content.locationName ?? content.title ?? 'Lieu',
+        locationName: content.locationName,
+        description: content.description,
+        coordinates: content.coordinates,
+      };
+
+      if (current.category !== 'hotel') {
+        await ctx.db.update(activity).set(incoming).where(eq(activity.id, current.id));
+        return { tripId: input.tripId, title: incoming.title };
+      }
+
+      const outgoing = {
+        discoveryContentId: current.discoveryContentId,
+        title: current.title,
+        locationName: current.locationName,
+        description: current.description,
+        coordinates: current.coordinates,
+      };
+
       const days = await ctx.db
         .select({ id: tripDay.id, dayIndex: tripDay.dayIndex })
         .from(tripDay)
         .where(eq(tripDay.tripId, input.tripId));
-
-      const alternativesDayId = days.find((d) => d.dayIndex === ALTERNATIVE_HOTELS_DAY_INDEX)?.id;
       const planningDayIds = days.filter((d) => d.dayIndex > 0).map((d) => d.id);
+      const alternativesDayId = days.find((d) => d.dayIndex === ALTERNATIVE_HOTELS_DAY_INDEX)?.id;
 
-      if (!alternativesDayId || planningDayIds.length === 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: "Ce voyage n'a pas d'itinéraire généré.",
-        });
-      }
-
-      // Scoping the lookup to this trip's alternatives day is what stops an
-      // arbitrary activity id from being written into the planning.
-      const [chosen] = await ctx.db
-        .select()
-        .from(activity)
-        .where(and(eq(activity.id, input.activityId), eq(activity.tripDayId, alternativesDayId)));
-
-      if (!chosen) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Cet hôtel ne fait pas partie des alternatives proposées.',
-        });
-      }
-
-      const currentHotels = await ctx.db
-        .select({
-          id: activity.id,
-          discoveryContentId: activity.discoveryContentId,
-          title: activity.title,
-          locationName: activity.locationName,
-          description: activity.description,
-          coordinates: activity.coordinates,
-        })
+      const hotelRows = await ctx.db
+        .select({ id: activity.id })
         .from(activity)
         .leftJoin(discoveryContent, eq(activity.discoveryContentId, discoveryContent.id))
         .where(
@@ -462,35 +631,100 @@ export const itineraryRouter = {
           ),
         );
 
-      const outgoing = currentHotels[0];
-      if (!outgoing) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: "L'itinéraire ne contient aucun hébergement à remplacer.",
-        });
-      }
-
-      const fieldsOf = (row: typeof outgoing) => ({
-        discoveryContentId: row.discoveryContentId,
-        title: row.title,
-        locationName: row.locationName,
-        description: row.description,
-        coordinates: row.coordinates,
-      });
-
       await ctx.db.transaction(async (tx) => {
         await tx
           .update(activity)
-          .set(fieldsOf(chosen))
+          .set(incoming)
           .where(
             inArray(
               activity.id,
-              currentHotels.map((h) => h.id),
+              hotelRows.map((h) => h.id),
             ),
           );
-        await tx.update(activity).set(fieldsOf(outgoing)).where(eq(activity.id, chosen.id));
+        if (alternativesDayId) {
+          await tx
+            .update(activity)
+            .set(outgoing)
+            .where(
+              and(
+                eq(activity.tripDayId, alternativesDayId),
+                eq(activity.discoveryContentId, content.id),
+              ),
+            );
+        }
       });
 
-      return { tripId: input.tripId, hotelTitle: chosen.title };
+      return { tripId: input.tripId, title: incoming.title };
+    }),
+
+  /**
+   * Saves a manual edit of the planning: places removed, moved to another day
+   * or reordered.
+   *
+   * The client sends the full target state of every planning day. Places that
+   * no longer appear anywhere are deleted; the others get their day and order.
+   */
+  updatePlanning: publicProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        days: z.array(
+          z.object({
+            dayId: z.string().uuid(),
+            activityIds: z.array(z.string().uuid()),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const planningDays = await ctx.db
+        .select({ id: tripDay.id })
+        .from(tripDay)
+        .where(and(eq(tripDay.tripId, input.tripId), gt(tripDay.dayIndex, 0)));
+      const planningDayIds = new Set(planningDays.map((d) => d.id));
+
+      const sentDayIds = new Set(input.days.map((d) => d.dayId));
+      if (
+        planningDayIds.size === 0 ||
+        sentDayIds.size !== input.days.length ||
+        sentDayIds.size !== planningDayIds.size ||
+        [...sentDayIds].some((id) => !planningDayIds.has(id))
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Les jours envoyés ne correspondent pas à cet itinéraire.',
+        });
+      }
+
+      const existing = await ctx.db
+        .select({ id: activity.id })
+        .from(activity)
+        .where(inArray(activity.tripDayId, [...planningDayIds]));
+      const existingIds = new Set(existing.map((a) => a.id));
+
+      const kept = input.days.flatMap((d) => d.activityIds);
+      const keptIds = new Set(kept);
+      if (keptIds.size !== kept.length || kept.some((id) => !existingIds.has(id))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: "Certains lieux envoyés ne font pas partie de l'itinéraire.",
+        });
+      }
+
+      const removed = [...existingIds].filter((id) => !keptIds.has(id));
+
+      await ctx.db.transaction(async (tx) => {
+        if (removed.length > 0) await tx.delete(activity).where(inArray(activity.id, removed));
+        for (const day of input.days) {
+          for (const [orderIndex, id] of day.activityIds.entries()) {
+            await tx
+              .update(activity)
+              .set({ tripDayId: day.dayId, orderIndex })
+              .where(eq(activity.id, id));
+          }
+        }
+      });
+
+      return { tripId: input.tripId, removed: removed.length };
     }),
 } satisfies TRPCRouterRecord;
