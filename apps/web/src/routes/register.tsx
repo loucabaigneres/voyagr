@@ -4,7 +4,14 @@ import { z } from 'zod'
 import { authClient } from '../lib/auth-client'
 
 const registerSearchSchema = z.object({
-  redirect: z.string().optional(),
+  redirect: z
+    .string()
+    .refine(
+      (val) => val.startsWith('/') && !val.startsWith('//'),
+      'Redirection interne obligatoire'
+    )
+    .optional()
+    .catch(undefined),
 })
 
 export const Route = createFileRoute('/register')({
@@ -33,9 +40,9 @@ function RegisterPage() {
       fetchOptions: {
         onSuccess: () => {
           if (redirect) {
-            navigate({ to: redirect })
+            navigate({ href: redirect })
           } else {
-            navigate({ to: '/onboarding' })
+            navigate({ to: '/' })
           }
         },
         onError: (ctx) => {
