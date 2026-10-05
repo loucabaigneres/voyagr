@@ -4,7 +4,14 @@ import { z } from 'zod'
 import { authClient } from '../lib/auth-client'
 
 const loginSearchSchema = z.object({
-  redirect: z.string().optional(),
+  redirect: z
+    .string()
+    .refine(
+      (val) => val.startsWith('/') && !val.startsWith('//'),
+      'Redirection interne obligatoire'
+    )
+    .optional()
+    .catch(undefined),
 })
 
 export const Route = createFileRoute('/login')({
@@ -31,9 +38,9 @@ function LoginPage() {
       fetchOptions: {
         onSuccess: () => {
           if (redirect) {
-            navigate({ to: redirect })
+            navigate({ href: redirect })
           } else {
-            navigate({ to: '/profile' })
+            navigate({ to: '/' })
           }
         },
         onError: (ctx) => {
