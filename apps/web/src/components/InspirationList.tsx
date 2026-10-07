@@ -148,7 +148,9 @@ export function InspirationList({
   const effectiveTripId = tripId || trips[0]?.id || '';
   const effectiveGroupTarget = groupTarget || groups[0]?.id || '';
 
-  const all = importsQuery.data ?? [];
+  // `groupIds` est toujours renvoyé par l'API, mais on se protège d'une réponse
+  // ancienne/partielle pour ne jamais crasher l'affichage de la liste.
+  const all = (importsQuery.data ?? []).map((i) => ({ ...i, groupIds: i.groupIds ?? [] }));
   const countFor = (f: GroupFilter) =>
     f === 'all'
       ? all.length
