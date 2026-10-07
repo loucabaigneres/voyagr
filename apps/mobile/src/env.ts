@@ -4,12 +4,16 @@ const envSchema = z.object({
   EXPO_PUBLIC_API_URL: z.url(),
 });
 
-const parsedEnv = envSchema.safeParse(process.env);
+// Expo only inlines EXPO_PUBLIC_* variables that are referenced literally,
+// so each one must be listed here rather than passing `process.env` as a whole.
+const parsedEnv = envSchema.safeParse({
+  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+});
 
 if (!parsedEnv.success) {
-  console.error('❌ Error parsing environment variables:');
-  console.error(JSON.stringify(z.treeifyError(parsedEnv.error), null, 2));
-  process.exit(1);
+  throw new Error(
+    `Variables d'environnement invalides (voir apps/mobile/.env.example) :\n${z.prettifyError(parsedEnv.error)}`,
+  );
 }
 
 export const env = parsedEnv.data;

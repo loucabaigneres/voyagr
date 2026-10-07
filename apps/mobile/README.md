@@ -1,56 +1,43 @@
-# Welcome to your Expo app 👋
+# Voyagr — mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo (SDK 57) + Expo Router app. Same journey and design as `apps/web`, rebuilt for native.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run
 
 ```bash
-npm run reset-project
+cp .env.example .env   # then set EXPO_PUBLIC_API_URL (see comments in the file)
+pnpm --filter @voyagr/mobile start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+| Script      | What it does                                   |
+| ----------- | ---------------------------------------------- |
+| `start`     | Expo dev server (Expo Go, emulator, simulator) |
+| `typecheck` | `tsc --noEmit`                                 |
+| `lint`      | ESLint (shared config + React Hooks rules)     |
+| `test`      | Jest (`jest-expo`) — unit tests of pure logic  |
 
-### Other setup steps
+## Where things go
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```
+src/
+  app/            Routes only (expo-router). Thin screens: compose components, call one feature hook.
+  features/<x>/   One folder per feature (onboarding, discovery, trip, …)
+    components/   UI specific to the feature, one component per file
+    hooks/        useXxx: tRPC calls + state orchestration
+    lib/          Pure functions (business rules), each with a *.test.ts
+    constants.ts  Options and copy
+  ui/             Design-system primitives (Text, Button, Card, Chip, Sheet, states…)
+  domain/         Helpers shared by every feature (places, dates, trip day conventions)
+  theme/tokens.ts Colours, radii, shadows — the only place a colour value may appear
+  lib/            tRPC client, env, storage, guest id
+```
 
-## Learn more
+## Rules
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. No business logic in `app/` screens or in components: put it in `features/*/lib` or `domain/`, with a test.
+2. No hard-coded colours: use token classes (`bg-primary`, `text-ink-muted`, `rounded-card`) or `theme/tokens`.
+3. API types come from `RouterOutputs` / `RouterInputs` (`@/lib/trpc`), never from relative imports into `apps/api`.
+4. Every query renders its loading, error (with retry) and empty states using `@/ui`.
+5. UI copy is French and uses "tu".
+6. Follow the charte (DA V1, Sept. 2026): one corallo (`primary`) button per screen, no shadows,
+   no emojis in the UI, icons from `@/ui/icons` (Phosphor), serif for titles, sans for actions.
