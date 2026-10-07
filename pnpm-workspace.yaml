@@ -3,3 +3,17 @@ packages:
   - "packages/*"
 
 # nodeLinker: hoisted
+
+packageExtensions:
+  # The API only uses the server plugin (`@better-auth/expo`), which imports no Expo module:
+  # without this, pnpm would install the whole Expo graph into the API.
+  '@better-auth/expo':
+    peerDependenciesMeta:
+      expo-constants:
+        optional: true
+      expo-linking:
+        optional: true
+      expo-network:
+        optional: true
+      expo-web-browser:
+        optional: true

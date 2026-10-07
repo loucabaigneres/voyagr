@@ -19,6 +19,7 @@
   "packageManager": "pnpm@10.33.2",
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.17",
+    "@better-auth/expo": "~1.6.23",
     "@fastify/cors": "^11.2.0",
     "@trpc/server": "^11.19.0",
     "@voyagr/database": "workspace:*",

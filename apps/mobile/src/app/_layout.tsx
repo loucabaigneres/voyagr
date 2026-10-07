@@ -55,6 +55,9 @@ export default function RootLayout() {
           <Stack.Screen name="discovery" options={{ gestureEnabled: false }} />
           <Stack.Screen name="trip/configure" />
           <Stack.Screen name="trip/[tripId]" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="auth/sign-in" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="auth/sign-up" options={{ presentation: 'modal' }} />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

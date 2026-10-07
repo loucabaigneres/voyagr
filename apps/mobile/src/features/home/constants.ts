@@ -1,15 +1,13 @@
 export const HOME_COPY = {
   overline: 'Ton voyage commence ici',
-  titleStart: 'Comment veux-tu trouver ta prochaine ',
-  titleEmphasis: 'escapade',
-  titleEnd: ' ?',
+  title: 'Comment veux-tu trouver ta prochaine escapade ?',
   subtitle:
     "Trouve ton séjour sur mesure en quelques swipes, ou laisse l'inspiration faire le reste.",
   guided: {
     badge: 'Recommandé',
     title: 'Guide-moi',
     description:
-      'Quatre questions express — ambiance, météo, compagnie — pour viser juste du premier coup.',
+      'Quatre questions express : ambiance, météo, compagniepour viser juste du premier coup.',
     cta: 'Lancer le quiz',
   },
   surprise: {

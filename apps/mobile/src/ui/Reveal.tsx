@@ -10,7 +10,6 @@ export interface RevealProps {
   className?: string;
 }
 
-
 export function Reveal({ children, order = 0, className }: RevealProps) {
   return (
     <Animated.View

@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { Em, Reveal, Text } from '@/ui';
+import { Reveal, Text } from '@/ui';
 
 import { ONBOARDING_COPY, QUESTIONS } from '../constants';
 import type { QuizQuestion } from '../lib/quiz';
@@ -14,15 +14,12 @@ export interface QuestionStepProps {
 
 export function QuestionStep({ question, selected, onToggle }: QuestionStepProps) {
   const { title, subtitle, options } = QUESTIONS[question];
-  const [before, emphasis, after] = title;
 
   return (
     <View className="gap-6">
       <Reveal order={0} className="gap-2">
         <Text variant="title" role="heading">
-          {before}
-          <Em>{emphasis}</Em>
-          {after}
+          {title}
         </Text>
         <Text tone="muted">{subtitle}</Text>
         <Text variant="overline" className="mt-2">

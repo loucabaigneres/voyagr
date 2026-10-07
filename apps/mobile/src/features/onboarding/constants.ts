@@ -28,15 +28,14 @@ export interface QuestionOption<Q extends QuizQuestion> {
 }
 
 export interface QuestionCopy<Q extends QuizQuestion> {
-  /** Title split around the italic word that carries the emotion. */
-  title: [before: string, emphasis: string, after: string];
+  title: string;
   subtitle: string;
   options: QuestionOption<Q>[];
 }
 
 export const QUESTIONS: { [Q in QuizQuestion]: QuestionCopy<Q> } = {
   landscapes: {
-    title: ['Quels ', 'décors', ' t’inspirent ?'],
+    title: 'Quels décors t’inspirent ?',
     subtitle: 'Choisis un ou plusieurs environnements pour ton séjour.',
     options: [
       {
@@ -66,7 +65,7 @@ export const QUESTIONS: { [Q in QuizQuestion]: QuestionCopy<Q> } = {
     ],
   },
   vibes: {
-    title: ['Quelles ', 'atmosphères', ' recherches-tu ?'],
+    title: 'Quelles atmosphères recherches-tu ?',
     subtitle: 'Sélectionne les expériences qui te font envie.',
     options: [
       {
@@ -102,7 +101,7 @@ export const QUESTIONS: { [Q in QuizQuestion]: QuestionCopy<Q> } = {
     ],
   },
   travelWith: {
-    title: ['Avec qui ', 'voyages', '-tu ?'],
+    title: 'Avec qui voyages-tu ?',
     subtitle: 'Précise la dynamique de ton groupe.',
     options: [
       {
@@ -132,7 +131,7 @@ export const QUESTIONS: { [Q in QuizQuestion]: QuestionCopy<Q> } = {
     ],
   },
   climates: {
-    title: ['Quel ', 'climat', ' préfères-tu ?'],
+    title: 'Quel climat préfères-tu ?',
     subtitle: 'Dernière question pour orienter la géographie du voyage.',
     options: [
       {
@@ -164,7 +163,7 @@ export const ONBOARDING_COPY = {
   continue: 'Continuer',
   submit: 'Découvrir mes destinations',
   analyzing: {
-    title: ['On analyse tes ', 'envies', '…'],
+    title: 'On analyse tes envies…',
     subtitle: 'On sélectionne les destinations et les lieux qui te ressemblent.',
   },
   error: 'Impossible d’enregistrer tes réponses pour le moment. Vérifie ta connexion et réessaie.',

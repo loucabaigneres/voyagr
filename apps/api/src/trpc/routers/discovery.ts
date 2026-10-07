@@ -228,7 +228,7 @@ export const discoveryRouter = {
       if (!top) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Aucune destination déterminée — pas assez de swipes.',
+          message: 'Aucune destination déterminée / pas assez de swipes.',
         });
       }
 
