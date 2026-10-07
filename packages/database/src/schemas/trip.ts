@@ -38,6 +38,7 @@ export const trip = pgTable('trip', {
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   isGroup: boolean('is_group').default(false).notNull(),
   inviteCode: varchar('invite_code', { length: 12 }).unique(),
+  inviteCodeExpiresAt: timestamp('invite_code_expires_at', { withTimezone: true }),
 });
 
 export const tripDay = pgTable(

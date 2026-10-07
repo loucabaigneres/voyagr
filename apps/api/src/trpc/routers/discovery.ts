@@ -3,7 +3,7 @@ import type { Context } from '../context.js';
 import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
 import type { DiscoveryContentData } from '@voyagr/database';
-import { eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DiscoveryItem, SwipeRecord } from '../../lib/recommendation/algorithm.js';
 import { rankDestinations, recommend } from '../../lib/recommendation/algorithm.js';
@@ -217,7 +217,12 @@ export const discoveryRouter = {
    * places in that city saved as activities. Requires a running, seeded DB.
    */
   saveTrip: publicProcedure
-    .input(z.object({ swipes: z.array(swipeInput) }))
+    .input(
+      z.object({
+        tripId: z.string().nullish(),
+        swipes: z.array(swipeInput),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const catalog = await getCatalog(ctx.db);
       const history = buildSwipeHistory(input.swipes, catalog);
@@ -271,21 +276,71 @@ export const discoveryRouter = {
         .filter((s) => s.liked && s.item.city === top.city)
         .map((s) => s.item);
 
-      const [createdTrip] = await ctx.db
-        .insert(trip)
-        .values({
-          userId,
-          title: `Voyage à ${top.city}`,
-          destination: top.city,
-          status: 'draft',
-        })
-        .returning({ id: trip.id });
+      let targetTripId = input.tripId ?? undefined;
+
+      if (userId !== 'guest') {
+        const pendingGroupTrip = await ctx.db.query.trip.findFirst({
+          where: (t, { and, eq, or, isNull }) =>
+            and(
+              eq(t.userId, userId),
+              eq(t.isGroup, true),
+              or(
+                isNull(t.destination),
+                eq(t.destination, 'Destination à définir'),
+                eq(t.destination, 'Nouvelle aventure'),
+              ),
+            ),
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
+        });
+
+        if (pendingGroupTrip) {
+          if (targetTripId && targetTripId !== pendingGroupTrip.id) {
+            await ctx.db
+              .delete(trip)
+              .where(eq(trip.id, targetTripId))
+              .catch(() => {});
+          }
+          targetTripId = pendingGroupTrip.id;
+        }
+      }
+
+      if (targetTripId) {
+        // Mise à jour du voyage (conserve isGroup et inviteCode existants)
+        await ctx.db
+          .update(trip)
+          .set({
+            title: `Voyage à ${top.city}`,
+            destination: top.city,
+            status: 'draft',
+            updatedAt: new Date(),
+          })
+          .where(eq(trip.id, targetTripId));
+
+        // Nettoyage de l'ancien jour 0 pour éviter les doublons
+        const existingDay0 = await ctx.db.query.tripDay.findFirst({
+          where: (td, { and, eq }) => and(eq(td.tripId, targetTripId!), eq(td.dayIndex, 0)),
+        });
+        if (existingDay0) {
+          await ctx.db.delete(tripDay).where(eq(tripDay.id, existingDay0.id));
+        }
+      } else {
+        const [createdTrip] = await ctx.db
+          .insert(trip)
+          .values({
+            userId,
+            title: `Voyage à ${top.city}`,
+            destination: top.city,
+            status: 'draft',
+          })
+          .returning({ id: trip.id });
+        targetTripId = createdTrip.id;
+      }
 
       // 3. A single day to hold the liked places.
       const [day] = await ctx.db
         .insert(tripDay)
         .values({
-          tripId: createdTrip.id,
+          tripId: targetTripId,
           dayIndex: 0,
           summary: `Lieux likés à ${top.city}`,
         })
@@ -311,7 +366,7 @@ export const discoveryRouter = {
       }
 
       return {
-        tripId: createdTrip.id,
+        tripId: targetTripId,
         destination: top.city,
         country: top.country,
         activityCount: activityValues.length,
