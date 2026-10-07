@@ -18,10 +18,31 @@ const INSTAGRAM_HOSTS = ['instagram.com', 'instagr.am', 'ig.me'];
 const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+// Les posts photo TikTok n'ont pas d'oEmbed, et la page rend une coquille vide à un UA
+// navigateur. En revanche, avec un UA de crawler social, TikTok renvoie un aperçu Open
+// Graph (légende + image de couverture) : c'est ce qu'on exploite en repli.
+const CRAWLER_USER_AGENT =
+  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+
 const FETCH_TIMEOUT_MS = 8000;
 
 const matchesHost = (hostname: string, hosts: string[]) =>
   hosts.some((host) => hostname === host || hostname.endsWith(`.${host}`));
+
+/**
+ * Clé de dédup d'un contenu : hôte (sans `www.`) + chemin sans slash final, query et
+ * fragment retirés. Deux collages du même lien donnent la même clé.
+ */
+export const normalizeContentUrl = (url: string): string => {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+    const path = u.pathname.replace(/\/+$/, '');
+    return `${host}${path}`;
+  } catch {
+    return url.trim().toLowerCase();
+  }
+};
 
 export const detectPlatform = (url: string): Platform => {
   let hostname: string;
@@ -65,45 +86,174 @@ export const stripHashtags = (caption: string): string =>
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-const fetchTikTokCaption = async (url: string): Promise<CaptionResult> => {
-  const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+interface TikTokOembed {
+  title?: string;
+  thumbnail_url?: string;
+}
+
+/**
+ * Suit les redirections pour transformer un lien court (`vm.tiktok.com/...`) en URL
+ * canonique (`tiktok.com/@compte/video/ID`). L'oEmbed TikTok n'accepte de façon fiable
+ * que l'URL canonique : appelé sur un lien court, il renvoie souvent un 400.
+ * Best-effort : en cas d'échec, on renvoie l'URL d'origine.
+ */
+const resolveTikTokUrl = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': BROWSER_USER_AGENT },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    // On n'a besoin que de l'URL finale, pas du corps de la page.
+    await response.body?.cancel().catch(() => {});
+
+    const finalUrl = response.url || url;
+    const parsed = new URL(finalUrl);
+    // On retire les paramètres de tracking (`?_r=...&_t=...`) que l'oEmbed digère mal.
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
+};
+
+const fetchTikTokOembed = async (url: string): Promise<TikTokOembed | null> => {
+  const canonicalUrl = await resolveTikTokUrl(url);
+  const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(canonicalUrl)}`;
 
   const response = await fetch(oembedUrl, {
     headers: { 'User-Agent': BROWSER_USER_AGENT },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
-  if (!response.ok) {
-    return { ok: false, reason: response.status === 404 ? 'not_found' : 'blocked' };
-  }
+  // 400 = contenu non supporté par l'oEmbed (ex. posts /photo/) ; null -> fallback manuel.
+  if (!response.ok) return null;
 
-  const data = (await response.json()) as { title?: string };
+  return (await response.json().catch(() => null)) as TikTokOembed | null;
+};
+
+const fetchTikTokCaption = async (url: string): Promise<CaptionResult> => {
+  const data = await fetchTikTokOembed(url);
+
   // `title` contient la légende complète de la vidéo, hashtags inclus.
-  if (!data.title) return { ok: false, reason: 'not_found' };
+  if (!data?.title) return { ok: false, reason: 'not_found' };
 
   return { ok: true, caption: data.title };
 };
 
 /**
- * L'oEmbed officiel d'Instagram exige désormais un token applicatif Meta : on se rabat
- * sur la balise Open Graph de la page publique. Best-effort — Instagram bloque
- * fréquemment les requêtes venant d'IP serveur, d'où le fallback manuel côté UI.
+ * Média exploitable par l'analyse IA : la légende (si disponible) et les URLs des
+ * images d'aperçu (thumbnail TikTok via oembed, og:image Instagram). On ne télécharge
+ * jamais la vidéo elle-même — seulement l'aperçu public déjà exposé par la plateforme.
  */
-const fetchInstagramCaption = async (url: string): Promise<CaptionResult> => {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': BROWSER_USER_AGENT,
-      'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-    },
+export interface MediaResult {
+  caption: string | null;
+  imageUrls: string[];
+}
+
+/**
+ * Repli pour les contenus sans oEmbed (posts /photo/) : on lit l'aperçu Open Graph
+ * servi aux crawlers sociaux. Donne la légende et l'image de couverture (pas tout le
+ * carrousel : seule la couverture est exposée côté serveur).
+ */
+const fetchTikTokPageOg = async (url: string): Promise<MediaResult> => {
+  const canonicalUrl = await resolveTikTokUrl(url);
+
+  const response = await fetch(canonicalUrl, {
+    headers: { 'User-Agent': CRAWLER_USER_AGENT, 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' },
+    redirect: 'follow',
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
-  if (!response.ok) {
-    return { ok: false, reason: response.status === 404 ? 'not_found' : 'blocked' };
-  }
+  if (!response.ok) return { caption: null, imageUrls: [] };
 
   const html = await response.text();
-  const caption = extractOpenGraphDescription(html);
+  const image = extractOpenGraphImage(html);
+
+  return {
+    caption: stripTikTokOgPrefix(extractOpenGraphDescription(html)),
+    imageUrls: image ? [image] : [],
+  };
+};
+
+// L'og:description TikTok est préfixée « TikTok | » (ou « TikTok · ») : on la retire.
+const stripTikTokOgPrefix = (caption: string | null): string | null => {
+  if (!caption) return null;
+  const cleaned = caption.replace(/^TikTok\s*[|·:]\s*/i, '').trim();
+  return cleaned || null;
+};
+
+const fetchTikTokMedia = async (url: string): Promise<MediaResult> => {
+  const data = await fetchTikTokOembed(url);
+
+  if (data?.title || data?.thumbnail_url) {
+    return {
+      caption: data.title?.trim() || null,
+      imageUrls: data.thumbnail_url ? [data.thumbnail_url] : [],
+    };
+  }
+
+  // Pas d'oEmbed exploitable (ex. post photo) : on tente l'aperçu Open Graph.
+  return fetchTikTokPageOg(url);
+};
+
+// L'og:description Instagram est préfixée par les stats d'engagement et l'auteur,
+// p.ex. « 728 likes, 53 comments - auteur on December 29, 2024: "<légende>" ».
+// On retire le compteur de likes/comments ; si le format ne correspond pas (autre
+// langue), on garde la description telle quelle.
+const stripInstagramOgPrefix = (caption: string | null): string | null => {
+  if (!caption) return null;
+  const cleaned = caption.replace(/^[\d.,\s]+likes?,\s*[\d.,\s]+comments?\s*-\s*/i, '').trim();
+  return cleaned || null;
+};
+
+/**
+ * Instagram rend une coquille vide à un UA navigateur depuis une IP serveur, mais sert
+ * son aperçu Open Graph (légende + image) à un crawler social. On exploite ce canal,
+ * comme pour les posts photo TikTok. Best-effort : contenus privés/age-gated -> vide,
+ * d'où le fallback « coller la description » côté UI.
+ */
+const fetchInstagramOg = async (url: string): Promise<MediaResult> => {
+  const response = await fetch(url, {
+    headers: { 'User-Agent': CRAWLER_USER_AGENT, 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+
+  if (!response.ok) return { caption: null, imageUrls: [] };
+
+  const html = await response.text();
+  const image = extractOpenGraphImage(html);
+
+  return {
+    caption: stripInstagramOgPrefix(extractOpenGraphDescription(html)),
+    imageUrls: image ? [image] : [],
+  };
+};
+
+/**
+ * Ne lève jamais : renvoie ce qu'on a pu obtenir (éventuellement vide), à charge
+ * pour l'appelant de décider si c'est suffisant pour lancer l'analyse.
+ */
+export const fetchMedia = async (url: string): Promise<MediaResult> => {
+  const platform = detectPlatform(url);
+
+  try {
+    if (platform === 'tiktok') return await fetchTikTokMedia(url);
+    if (platform === 'instagram') return await fetchInstagramOg(url);
+  } catch {
+    return { caption: null, imageUrls: [] };
+  }
+
+  return { caption: null, imageUrls: [] };
+};
+
+/**
+ * L'oEmbed officiel d'Instagram exige un token applicatif Meta : on se rabat sur l'aperçu
+ * Open Graph servi aux crawlers (cf. `fetchInstagramOg`). Best-effort — contenus privés
+ * ou indisponibles -> `blocked`, d'où le fallback manuel côté UI.
+ */
+const fetchInstagramCaption = async (url: string): Promise<CaptionResult> => {
+  const { caption } = await fetchInstagramOg(url);
 
   if (!caption) return { ok: false, reason: 'blocked' };
 
@@ -119,6 +269,58 @@ export const extractOpenGraphDescription = (html: string): string | null => {
   if (!raw) return null;
 
   return decodeHtmlEntities(raw).trim() || null;
+};
+
+export const extractOpenGraphImage = (html: string): string | null => {
+  const match =
+    html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)["']/i) ??
+    html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:image["']/i);
+
+  const raw = match?.[1];
+  if (!raw) return null;
+
+  return decodeHtmlEntities(raw).trim() || null;
+};
+
+/** Taille maximale d'une image d'aperçu relayée vers l'IA. */
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Télécharge une image d'aperçu et la renvoie encodée en base64, prête à être
+ * envoyée à Gemini en `inlineData`. Best-effort : renvoie `null` (sans lever) si
+ * la ressource est inaccessible, n'est pas une image, ou dépasse la taille limite.
+ */
+export const downloadImageAsInline = async (
+  rawUrl: string,
+): Promise<{ mimeType: string; data: string } | null> => {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+
+  try {
+    const response = await fetch(rawUrl, {
+      headers: { 'User-Agent': BROWSER_USER_AGENT },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: 'follow',
+    });
+
+    if (!response.ok) return null;
+
+    const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() ?? '';
+    if (!mimeType.startsWith('image/')) return null;
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.byteLength === 0 || buffer.byteLength > MAX_IMAGE_BYTES) return null;
+
+    return { mimeType, data: buffer.toString('base64') };
+  } catch {
+    return null;
+  }
 };
 
 const HTML_ENTITIES: Record<string, string> = {

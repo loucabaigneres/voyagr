@@ -15,6 +15,13 @@
       "when": 1789457856157,
       "tag": "0001_dear_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791363324050,
+      "tag": "0002_rich_miracleman",
+      "breakpoints": true
     }
   ]
 }

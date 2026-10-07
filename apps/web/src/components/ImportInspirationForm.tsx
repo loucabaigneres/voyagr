@@ -1,13 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Link2, Loader2, Sparkles } from 'lucide-react';
+import { Link2, Loader2, MapPin, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { trpc, type RouterOutputs } from '../lib/trpc';
 import type { ImportInspirationValues } from '../lib/validations/inspiration';
-import { CAPTION_UNAVAILABLE, importInspirationSchema } from '../lib/validations/inspiration';
+import {
+  AI_UNAVAILABLE,
+  CAPTION_UNAVAILABLE,
+  importInspirationSchema,
+} from '../lib/validations/inspiration';
 
-type ImportResult = RouterOutputs['inspiration']['importFromUrl'];
+type ImportResult = RouterOutputs['inspiration']['analyzeFromUrl'];
 
 interface ImportInspirationFormProps {
   onSuccess?: (result: ImportResult) => void;
@@ -36,8 +40,8 @@ export function ImportInspirationForm({
     defaultValues: { url: '', caption: '' },
   });
 
-  const importMutation = useMutation(
-    trpc.inspiration.importFromUrl.mutationOptions({
+  const analyzeMutation = useMutation(
+    trpc.inspiration.analyzeFromUrl.mutationOptions({
       onSuccess: (data) => {
         setResult(data);
         setErrorMessage(null);
@@ -52,7 +56,14 @@ export function ImportInspirationForm({
           // La récupération automatique a échoué : on déplie la saisie manuelle.
           setShowCaptionField(true);
           setErrorMessage(
-            "Impossible de récupérer la description automatiquement. Colle-la ci-dessous pour continuer.",
+            "Impossible de récupérer le contenu automatiquement. Colle la description ci-dessous pour lancer l'analyse.",
+          );
+          return;
+        }
+
+        if (error.message === AI_UNAVAILABLE) {
+          setErrorMessage(
+            "L'analyse IA n'est pas disponible pour le moment (configuration serveur manquante).",
           );
           return;
         }
@@ -64,7 +75,7 @@ export function ImportInspirationForm({
 
   const onSubmit = (values: ImportInspirationValues) => {
     const caption = values.caption?.trim();
-    importMutation.mutate({ url: values.url, caption: caption || undefined });
+    analyzeMutation.mutate({ url: values.url, caption: caption || undefined });
   };
 
   return (
@@ -74,7 +85,7 @@ export function ImportInspirationForm({
     >
       <div>
         <label htmlFor="inspirationUrl" className="mb-2 block text-sm font-medium text-[#1a1a1a]">
-          Lien TikTok
+          Lien TikTok ou Instagram
         </label>
         <div className="relative">
           <Link2 className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#bbb]" />
@@ -129,12 +140,58 @@ export function ImportInspirationForm({
       )}
 
       {result && (
-        <div className="mt-4 rounded-xl bg-[#e8f8f0] p-4">
+        <div className="mt-4 space-y-4 rounded-xl bg-[#e8f8f0] p-4">
           <p className="text-xs font-semibold text-[#2ecc71]">
-            ✓ Inspiration importée depuis {result.inspiration.platform === 'tiktok' ? 'TikTok' : 'Instagram'}
+            ✓ Analysé depuis {result.inspiration.platform === 'tiktok' ? 'TikTok' : 'Instagram'}
           </p>
-          {result.inspiration.tags.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
+          {result.alreadyImported && (
+            <p className="text-xs font-medium text-[#888]">
+              Cette vidéo avait déjà été analysée : voici son analyse (aucun doublon créé).
+            </p>
+          )}
+
+          {result.inspiration.report && (
+            <div>
+              <p className="text-xs font-bold tracking-wide text-[#1a1a1a] uppercase">Compte rendu</p>
+              <p className="mt-1 text-sm leading-relaxed text-[#1a1a1a]">{result.inspiration.report}</p>
+            </div>
+          )}
+
+          {result.inspiration.places.length > 0 && (
+            <div>
+              <p className="text-xs font-bold tracking-wide text-[#1a1a1a] uppercase">
+                Lieux détectés
+              </p>
+              <ul className="mt-2 space-y-2">
+                {result.inspiration.places.map((place, index) => (
+                  <li
+                    key={`${place.name}-${index}`}
+                    className="flex gap-2 rounded-lg bg-white p-3 shadow-sm"
+                  >
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#FF4D4D]" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#1a1a1a]">{place.name}</p>
+                      {place.address ? (
+                        <p className="text-xs text-[#555]">{place.address}</p>
+                      ) : (
+                        [place.city, place.country].filter(Boolean).length > 0 && (
+                          <p className="text-xs text-[#555]">
+                            {[place.city, place.country].filter(Boolean).join(', ')}
+                          </p>
+                        )
+                      )}
+                      {place.description && (
+                        <p className="mt-1 text-xs text-[#888]">{place.description}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.inspiration.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
               {result.inspiration.tags.map((tag) => (
                 <span
                   key={tag}
@@ -144,10 +201,6 @@ export function ImportInspirationForm({
                 </span>
               ))}
             </div>
-          ) : (
-            <p className="mt-2 text-xs font-medium text-[#888]">
-              Aucun hashtag trouvé dans cette publication.
-            </p>
           )}
         </div>
       )}
@@ -164,10 +217,10 @@ export function ImportInspirationForm({
         )}
         <button
           type="submit"
-          disabled={importMutation.isPending}
+          disabled={analyzeMutation.isPending}
           className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#FF4D4D] py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:brightness-105 active:scale-95 disabled:opacity-50"
         >
-          {importMutation.isPending ? (
+          {analyzeMutation.isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Analyse en cours…
@@ -175,7 +228,7 @@ export function ImportInspirationForm({
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              Importer l'inspiration
+              Analyser l'inspiration
             </>
           )}
         </button>

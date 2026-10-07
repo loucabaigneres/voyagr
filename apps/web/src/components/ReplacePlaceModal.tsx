@@ -135,6 +135,11 @@ export function ReplacePlaceModal({
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-semibold leading-tight text-[#1a1a1a]">{candidate.title}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[#888]">
+                    {candidate.imported && (
+                      <span className="rounded-full bg-[rgba(46,204,113,.14)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#1f9d57]">
+                        Mon inspiration
+                      </span>
+                    )}
                     {candidate.suggested && (
                       <span className="rounded-full bg-[rgba(255,77,77,.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#E03E3E]">
                         Suggéré
