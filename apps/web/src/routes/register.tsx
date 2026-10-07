@@ -40,7 +40,7 @@ function RegisterPage() {
       fetchOptions: {
         onSuccess: () => {
           if (redirect) {
-            navigate({ href: redirect })
+            window.location.href = redirect
           } else {
             navigate({ to: '/' })
           }

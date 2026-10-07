@@ -18,6 +18,7 @@ import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TripConfigureRouteImport } from './routes/trip/configure'
 import { Route as TripTripIdRouteImport } from './routes/trip.$tripId'
+import { Route as JoinInviteCodeRouteImport } from './routes/join.$inviteCode'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -64,6 +65,11 @@ const TripTripIdRoute = TripTripIdRouteImport.update({
   path: '/trip/$tripId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinInviteCodeRoute = JoinInviteCodeRouteImport.update({
+  id: '/join/$inviteCode',
+  path: '/join/$inviteCode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/join/$inviteCode': typeof JoinInviteCodeRoute
   '/trip/$tripId': typeof TripTripIdRoute
   '/trip/configure': typeof TripConfigureRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/join/$inviteCode': typeof JoinInviteCodeRoute
   '/trip/$tripId': typeof TripTripIdRoute
   '/trip/configure': typeof TripConfigureRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/join/$inviteCode': typeof JoinInviteCodeRoute
   '/trip/$tripId': typeof TripTripIdRoute
   '/trip/configure': typeof TripConfigureRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/register'
+    | '/join/$inviteCode'
     | '/trip/$tripId'
     | '/trip/configure'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/register'
+    | '/join/$inviteCode'
     | '/trip/$tripId'
     | '/trip/configure'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/register'
+    | '/join/$inviteCode'
     | '/trip/$tripId'
     | '/trip/configure'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
+  JoinInviteCodeRoute: typeof JoinInviteCodeRoute
   TripTripIdRoute: typeof TripTripIdRoute
   TripConfigureRoute: typeof TripConfigureRoute
 }
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TripTripIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join/$inviteCode': {
+      id: '/join/$inviteCode'
+      path: '/join/$inviteCode'
+      fullPath: '/join/$inviteCode'
+      preLoaderRoute: typeof JoinInviteCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
+  JoinInviteCodeRoute: JoinInviteCodeRoute,
   TripTripIdRoute: TripTripIdRoute,
   TripConfigureRoute: TripConfigureRoute,
 }

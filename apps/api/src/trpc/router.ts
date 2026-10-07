@@ -9,6 +9,7 @@ import { itineraryRouter } from './routers/itinerary.js';
 import { userRouter } from './routers/user.js';
 import { tripFormSchema } from './schemas/trip.js';
 import { onboardingRouter } from './routers/onboarding.js';
+import { groupRouter } from './routers/group.js';
 
 export const appRouter = createTRPCRouter({
   // Example route that requires authentication
@@ -157,6 +158,7 @@ export const appRouter = createTRPCRouter({
     ...itineraryRouter,
   }),
 
+  group: groupRouter,
   user: userRouter,
   inspiration: inspirationRouter,
   onboarding: onboardingRouter,
