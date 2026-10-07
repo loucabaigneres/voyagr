@@ -34,11 +34,11 @@ export interface InspirationAnalysis {
 export type AnalysisErrorReason = 'missing_key' | 'blocked' | 'api_error' | 'bad_response';
 
 export class AnalysisError extends Error {
-  constructor(
-    public readonly reason: AnalysisErrorReason,
-    message: string,
-  ) {
+  readonly reason: AnalysisErrorReason;
+
+  constructor(reason: AnalysisErrorReason, message: string) {
     super(message);
+    this.reason = reason;
     this.name = 'AnalysisError';
   }
 }

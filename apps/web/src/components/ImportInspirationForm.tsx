@@ -99,7 +99,9 @@ export function ImportInspirationForm({
             {...register('url')}
           />
         </div>
-        {errors.url && <p className="mt-2 text-xs font-medium text-[#FF4D4D]">{errors.url.message}</p>}
+        {errors.url && (
+          <p className="mt-2 text-xs font-medium text-[#FF4D4D]">{errors.url.message}</p>
+        )}
       </div>
 
       {!showCaptionField && (
@@ -114,7 +116,10 @@ export function ImportInspirationForm({
 
       {showCaptionField && (
         <div className="mt-4">
-          <label htmlFor="inspirationCaption" className="mb-2 block text-sm font-medium text-[#1a1a1a]">
+          <label
+            htmlFor="inspirationCaption"
+            className="mb-2 block text-sm font-medium text-[#1a1a1a]"
+          >
             Colle la description du post
           </label>
           <textarea
@@ -152,8 +157,12 @@ export function ImportInspirationForm({
 
           {result.inspiration.report && (
             <div>
-              <p className="text-xs font-bold tracking-wide text-[#1a1a1a] uppercase">Compte rendu</p>
-              <p className="mt-1 text-sm leading-relaxed text-[#1a1a1a]">{result.inspiration.report}</p>
+              <p className="text-xs font-bold tracking-wide text-[#1a1a1a] uppercase">
+                Compte rendu
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-[#1a1a1a]">
+                {result.inspiration.report}
+              </p>
             </div>
           )}
 

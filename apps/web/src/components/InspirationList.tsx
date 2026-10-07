@@ -1,6 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Check, ExternalLink, Folder, FolderPlus, Loader2, MapPin, Plus, Trash2, X } from 'lucide-react';
+import {
+  Check,
+  ExternalLink,
+  Folder,
+  FolderPlus,
+  Loader2,
+  MapPin,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { trpc, type RouterOutputs } from '../lib/trpc';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -28,7 +38,11 @@ function inspirationTitle(item: Inspiration): string {
 // 'all' = toutes, 'none' = sans groupe, sinon l'id du groupe.
 type GroupFilter = 'all' | 'none' | string;
 
-export function InspirationList({ enabled = true, emptyAction, className = '' }: InspirationListProps) {
+export function InspirationList({
+  enabled = true,
+  emptyAction,
+  className = '',
+}: InspirationListProps) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [tripId, setTripId] = useState('');
@@ -153,14 +167,18 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
   const selectedCount = selected.size;
 
   if (importsQuery.isLoading) {
-    return <p className="p-6 text-center text-sm font-medium text-[#888]">Chargement de tes imports…</p>;
+    return (
+      <p className="p-6 text-center text-sm font-medium text-[#888]">Chargement de tes imports…</p>
+    );
   }
 
   if (all.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-[#ddd] bg-white p-10 text-center shadow-sm">
         <span className="text-4xl">✨</span>
-        <p className="text-sm font-semibold text-[#1a1a1a]">Tu n'as pas encore importé d'inspiration.</p>
+        <p className="text-sm font-semibold text-[#1a1a1a]">
+          Tu n'as pas encore importé d'inspiration.
+        </p>
         {emptyAction}
       </div>
     );
@@ -172,7 +190,9 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
       <span
         key={f}
         className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-          isActive ? 'border-[#FF4D4D] bg-[#FF4D4D] text-white' : 'border-[#ddd] bg-white text-[#555] hover:border-[#FF4D4D]'
+          isActive
+            ? 'border-[#FF4D4D] bg-[#FF4D4D] text-white'
+            : 'border-[#ddd] bg-white text-[#555] hover:border-[#FF4D4D]'
         }`}
       >
         <button type="button" onClick={() => setActiveGroup(f)} className="cursor-pointer">
@@ -249,7 +269,9 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                     aria-pressed={isSelected}
                     aria-label={isSelected ? 'Désélectionner' : 'Sélectionner'}
                     className={`mt-0.5 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-md border transition ${
-                      isSelected ? 'border-[#FF4D4D] bg-[#FF4D4D] text-white' : 'border-[#ccc] bg-white hover:border-[#FF4D4D]'
+                      isSelected
+                        ? 'border-[#FF4D4D] bg-[#FF4D4D] text-white'
+                        : 'border-[#ccc] bg-white hover:border-[#FF4D4D]'
                     }`}
                   >
                     {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -264,7 +286,9 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-[#1a1a1a]">{inspirationTitle(item)}</p>
+                      <p className="truncate text-sm font-bold text-[#1a1a1a]">
+                        {inspirationTitle(item)}
+                      </p>
                       <a
                         href={item.originalUrl}
                         target="_blank"
@@ -291,17 +315,24 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                   </div>
 
                   {item.report ? (
-                    <p className="mt-2 line-clamp-4 text-xs leading-relaxed text-[#555]">{item.report}</p>
+                    <p className="mt-2 line-clamp-4 text-xs leading-relaxed text-[#555]">
+                      {item.report}
+                    </p>
                   ) : (
                     item.description && (
-                      <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-[#555]">{item.description}</p>
+                      <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-[#555]">
+                        {item.description}
+                      </p>
                     )
                   )}
 
                   {item.places.length > 0 && (
                     <ul className="mt-3 space-y-1.5">
                       {item.places.map((place, index) => (
-                        <li key={`${place.name}-${index}`} className="flex items-start gap-2 text-xs">
+                        <li
+                          key={`${place.name}-${index}`}
+                          className="flex items-start gap-2 text-xs"
+                        >
                           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF4D4D]" />
                           <span className="text-[#1a1a1a]">
                             <span className="font-bold">{place.name}</span>
@@ -319,7 +350,10 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                   {item.tags.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-[#F2EDE8] px-3 py-1 text-xs font-semibold text-[#555]">
+                        <span
+                          key={tag}
+                          className="rounded-full bg-[#F2EDE8] px-3 py-1 text-xs font-semibold text-[#555]"
+                        >
                           #{tag}
                         </span>
                       ))}
@@ -337,7 +371,10 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                           <button
                             type="button"
                             onClick={() =>
-                              removeFromGroupMutation.mutate({ inspirationIds: [item.id], groupId: gid })
+                              removeFromGroupMutation.mutate({
+                                inspirationIds: [item.id],
+                                groupId: gid,
+                              })
                             }
                             aria-label={`Retirer de ${groupName(gid)}`}
                             className="cursor-pointer rounded-full p-0.5 transition hover:bg-[#3b5bdb]/15"
@@ -359,7 +396,8 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
         <div className="rounded-2xl bg-[#e8f8f0] p-4 text-sm">
           {addedTo.count > 0 ? (
             <p className="font-semibold text-[#2ecc71]">
-              ✓ {addedTo.count} lieu{addedTo.count > 1 ? 'x' : ''} ajouté{addedTo.count > 1 ? 's' : ''} à ton voyage.{' '}
+              ✓ {addedTo.count} lieu{addedTo.count > 1 ? 'x' : ''} ajouté
+              {addedTo.count > 1 ? 's' : ''} à ton voyage.{' '}
               <Link
                 to="/trip/$tripId"
                 params={{ tripId: addedTo.tripId }}
@@ -379,7 +417,8 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
         <div className="sticky bottom-3 z-10 space-y-4 rounded-2xl border border-[#eee] bg-white/95 p-4 shadow-lg backdrop-blur">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-bold text-[#1a1a1a]">
-              {selectedCount} post{selectedCount > 1 ? 's' : ''} sélectionné{selectedCount > 1 ? 's' : ''}
+              {selectedCount} post{selectedCount > 1 ? 's' : ''} sélectionné
+              {selectedCount > 1 ? 's' : ''}
             </span>
             <button
               type="button"
@@ -417,11 +456,18 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                   type="button"
                   disabled={!effectiveGroupTarget || addToGroupMutation.isPending}
                   onClick={() =>
-                    addToGroupMutation.mutate({ inspirationIds: [...selected], groupId: effectiveGroupTarget })
+                    addToGroupMutation.mutate({
+                      inspirationIds: [...selected],
+                      groupId: effectiveGroupTarget,
+                    })
                   }
                   className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#FF4D4D] px-3 py-2 text-sm font-bold text-[#FF4D4D] transition hover:bg-[#FF4D4D] hover:text-white active:scale-95 disabled:opacity-50"
                 >
-                  {addToGroupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={3} />}
+                  {addToGroupMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" strokeWidth={3} />
+                  )}
                   Classer ici
                 </button>
                 <button
@@ -450,7 +496,9 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
               Ajouter les lieux à un voyage
             </p>
             {trips.length === 0 ? (
-              <p className="text-xs font-medium text-[#888]">Crée d'abord un voyage pour y ajouter ces lieux.</p>
+              <p className="text-xs font-medium text-[#888]">
+                Crée d'abord un voyage pour y ajouter ces lieux.
+              </p>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <select
@@ -468,11 +516,18 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
                   type="button"
                   disabled={!effectiveTripId || addToTripMutation.isPending}
                   onClick={() =>
-                    addToTripMutation.mutate({ tripId: effectiveTripId, inspirationIds: [...selected] })
+                    addToTripMutation.mutate({
+                      tripId: effectiveTripId,
+                      inspirationIds: [...selected],
+                    })
                   }
                   className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-bold text-white shadow-md shadow-red-500/25 transition hover:brightness-105 active:scale-95 disabled:opacity-50"
                 >
-                  {addToTripMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={3} />}
+                  {addToTripMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" strokeWidth={3} />
+                  )}
                   Ajouter au voyage
                 </button>
               </div>
@@ -485,18 +540,26 @@ export function InspirationList({ enabled = true, emptyAction, className = '' }:
         addToGroupMutation.isError ||
         removeFromGroupMutation.isError ||
         deleteMutation.isError) && (
-        <p className="text-center text-xs font-medium text-[#FF4D4D]">Une action a échoué, réessaie.</p>
+        <p className="text-center text-xs font-medium text-[#FF4D4D]">
+          Une action a échoué, réessaie.
+        </p>
       )}
 
       {confirm && (
         <ConfirmDialog
-          title={confirm.kind === 'inspiration' ? 'Supprimer la publication ?' : 'Supprimer le groupe ?'}
+          title={
+            confirm.kind === 'inspiration' ? 'Supprimer la publication ?' : 'Supprimer le groupe ?'
+          }
           message={
             confirm.kind === 'inspiration'
               ? 'Cette publication analysée sera retirée de ta liste. Les lieux déjà ajoutés à tes voyages sont conservés.'
               : `« ${confirm.name} » sera supprimé. Les publications qu'il contient seront déclassées, pas supprimées.`
           }
-          loading={confirm.kind === 'inspiration' ? deleteMutation.isPending : deleteGroupMutation.isPending}
+          loading={
+            confirm.kind === 'inspiration'
+              ? deleteMutation.isPending
+              : deleteGroupMutation.isPending
+          }
           onConfirm={confirmDelete}
           onCancel={() => setConfirm(null)}
         />
