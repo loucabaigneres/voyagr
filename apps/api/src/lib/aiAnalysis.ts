@@ -25,6 +25,10 @@ export interface InlineImage {
 export interface InspirationAnalysis {
   /** Compte rendu rédigé du contenu de la publication. */
   summary: string;
+  /** Type global de la publication (hôtel / restaurant / activité), pour le filtre. */
+  type: PlaceCategory | null;
+  /** Ville principale de la publication. */
+  city: string | null;
   /** Lieux détectés, avec adresse quand elle est connue. */
   places: ExtractedPlace[];
   /** Mots-clés thématiques (sans le `#`), utiles pour nourrir les voyages. */
@@ -43,25 +47,32 @@ export class AnalysisError extends Error {
   }
 }
 
-export const ANALYSIS_SYSTEM_PROMPT = `Tu es un assistant de voyage. On te donne le contenu d'une publication TikTok ou Instagram : sa légende et une ou plusieurs images d'aperçu.
+export const ANALYSIS_SYSTEM_PROMPT = `Tu es un assistant de voyage. On te donne le contenu d'une publication TikTok ou Instagram : sa légende, une ou plusieurs images d'aperçu, et parfois la transcription de sa bande-son (sous-titres). La transcription est souvent la source la plus riche : elle nomme des lieux précis absents de la légende.
 
 Ta tâche :
-1. Rédige un compte rendu clair et concis (3 à 6 phrases, en français) de ce que montre ou raconte la publication.
-2. Identifie les lieux mentionnés ou visibles (restaurants, monuments, villes, points d'intérêt, hébergements...). Pour chaque lieu :
+1. Rédige un compte rendu clair et concis (3 à 6 phrases, en français) de ce que montre ou raconte la publication. Si des lieux précis sont nommés, cite-les dans le compte rendu.
+2. Identifie TOUS les lieux mentionnés ou visibles (restaurants, monuments, villes, points d'intérêt, hébergements...). Si la publication présente une liste (ex. « top 3 », « 3 activités »), crée une entrée DISTINCTE par lieu. Pour chaque lieu :
    - "name" : le nom du lieu.
    - "address" : l'adresse postale complète SEULEMENT si tu la connais avec une confiance raisonnable. Sinon null. N'invente jamais une adresse.
    - "city" et "country" : renseigne-les quand tu peux les déduire, sinon null.
    - "description" : une phrase expliquant l'intérêt du lieu pour un voyageur, sinon null.
    - "category" : classe le lieu dans EXACTEMENT une de ces valeurs : "restaurant" (restaurant, bar, café, street-food), "hotel" (hôtel, hébergement), "activité" (monument, musée, parc, visite, point d'intérêt). Si rien ne correspond, "autre".
-3. "tags" : 3 à 8 mots-clés thématiques en minuscules, sans le caractère #.
+3. "type" : le type GLOBAL de la publication, dans EXACTEMENT une de ces valeurs : "restaurant", "hotel", "activité" (ou "autre" si rien ne correspond). C'est le thème dominant du post, pas forcément d'un lieu précis.
+4. "city" : le nom de la ville principale de la publication (ex. "Paris"), sinon null.
+5. "tags" : 3 à 8 mots-clés thématiques en minuscules, sans le caractère #.
 
 Si aucun lieu n'est identifiable, renvoie une liste "places" vide. Réponds uniquement avec le JSON demandé.`;
 
-/** Texte utilisateur à partir de la légende (ou consigne de repli sur les images). */
-export const buildUserText = (caption: string | null): string =>
-  caption
-    ? `Légende de la publication :\n"""${caption}"""`
-    : "La publication n'a pas de légende exploitable : appuie-toi sur les images.";
+/** Assemble la légende et la transcription (quand elles existent) en un seul bloc de texte. */
+export const buildUserText = (caption: string | null, transcript: string | null): string => {
+  const blocks: string[] = [];
+  if (caption) blocks.push(`Légende de la publication :\n"""${caption}"""`);
+  if (transcript) blocks.push(`Transcription de la bande-son (sous-titres) :\n"""${transcript}"""`);
+  if (blocks.length === 0) {
+    return "La publication n'a pas de texte exploitable : appuie-toi sur les images.";
+  }
+  return blocks.join('\n\n');
+};
 
 const REQUEST_TIMEOUT_MS = 30_000;
 // Les modèles renvoient par moments un 429/500/503 (pic de charge) : on retente
@@ -162,9 +173,12 @@ export const parseAnalysis = (text: string, label: string): InspirationAnalysis 
       ]
     : [];
 
+  const type = coerceCategory(obj.type);
+  const city = typeof obj.city === 'string' && obj.city.trim() ? obj.city.trim() : null;
+
   if (!summary && places.length === 0) {
     throw new AnalysisError('bad_response', `${label} output is empty.`);
   }
 
-  return { summary, places, tags };
+  return { summary, type, city, places, tags };
 };

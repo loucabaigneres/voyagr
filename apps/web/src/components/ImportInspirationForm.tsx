@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
-import { Link2, Loader2, MapPin, Sparkles } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
+import { Link2, Loader2, MapPin, Plus, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { trpc, type RouterOutputs } from '../lib/trpc';
@@ -26,9 +27,16 @@ export function ImportInspirationForm({
   compact = false,
   className = '',
 }: ImportInspirationFormProps) {
+  const queryClient = useQueryClient();
   const [showCaptionField, setShowCaptionField] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [tripId, setTripId] = useState('');
+  const [addedTo, setAddedTo] = useState<{ tripId: string; count: number } | null>(null);
+
+  const tripsQuery = useQuery(trpc.user.getTrips.queryOptions());
+  const trips = tripsQuery.data ?? [];
+  const effectiveTripId = tripId || trips[0]?.id || '';
 
   const {
     register,
@@ -40,12 +48,22 @@ export function ImportInspirationForm({
     defaultValues: { url: '', caption: '' },
   });
 
+  const addToTripMutation = useMutation(
+    trpc.inspiration.addToTrip.mutationOptions({
+      onSuccess: (data) => {
+        setAddedTo({ tripId: data.tripId, count: data.added });
+        queryClient.invalidateQueries(trpc.discovery.getTrip.queryFilter({ tripId: data.tripId }));
+      },
+    }),
+  );
+
   const analyzeMutation = useMutation(
     trpc.inspiration.analyzeFromUrl.mutationOptions({
       onSuccess: (data) => {
         setResult(data);
         setErrorMessage(null);
         setShowCaptionField(false);
+        setAddedTo(null);
         reset({ url: '', caption: '' });
         onSuccess?.(data);
       },
@@ -209,6 +227,60 @@ export function ImportInspirationForm({
                   #{tag}
                 </span>
               ))}
+            </div>
+          )}
+
+          {result.inspiration.places.length > 0 && (
+            <div className="border-t border-[#2ecc71]/20 pt-3">
+              {addedTo ? (
+                <p className="text-xs font-semibold text-[#2ecc71]">
+                  ✓ {addedTo.count} lieu{addedTo.count > 1 ? 'x' : ''} ajouté
+                  {addedTo.count > 1 ? 's' : ''} à ton voyage.{' '}
+                  <Link
+                    to="/trip/$tripId"
+                    params={{ tripId: addedTo.tripId }}
+                    className="font-bold text-[#1a1a1a] underline underline-offset-2 hover:text-[#FF4D4D]"
+                  >
+                    Voir le voyage
+                  </Link>
+                </p>
+              ) : trips.length === 0 ? (
+                <p className="text-xs font-medium text-[#888]">
+                  Crée d'abord un voyage pour y ajouter ces lieux.
+                </p>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={effectiveTripId}
+                    onChange={(e) => setTripId(e.target.value)}
+                    className="max-w-[55vw] cursor-pointer truncate rounded-xl border border-[#ddd] bg-white px-3 py-2 text-sm text-[#1a1a1a] outline-none focus:border-[#FF4D4D] sm:max-w-[220px]"
+                  >
+                    {trips.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title || t.destination || 'Voyage sans titre'}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!effectiveTripId || addToTripMutation.isPending}
+                    onClick={() =>
+                      addToTripMutation.mutate({
+                        tripId: effectiveTripId,
+                        inspirationIds: [result.inspiration.id],
+                      })
+                    }
+                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-bold text-white shadow-md shadow-red-500/25 transition hover:brightness-105 active:scale-95 disabled:opacity-50"
+                  >
+                    {addToTripMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" strokeWidth={3} />
+                    )}
+                    Ajouter au voyage
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

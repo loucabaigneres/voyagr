@@ -10,8 +10,9 @@
  */
 
 import type { ExtractedPlace, PlaceCategory } from '@voyagr/database';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Context } from '../trpc/context.js';
+import { geocodeAddress, toWktPoint } from './geocoding.js';
 import { discoveryContent } from './tables.js';
 
 const stripDiacritics = (value: string) =>
@@ -28,17 +29,25 @@ export const normalizePlaceKey = (name: string, city: string | null): string =>
 export const importedPlaceUrl = (userId: string, key: string): string =>
   `imported:${userId}:${key}`;
 
+export interface ImportedPlaceRef {
+  id: string;
+  /** WKT `POINT(lng lat)` quand on a pu géocoder l'adresse, sinon `null`. */
+  coordinates: string | null;
+}
+
 /**
- * Crée (ou retrouve) l'élément lieu d'un utilisateur et renvoie son id `discovery_content`.
+ * Crée (ou retrouve) l'élément lieu d'un utilisateur et renvoie sa référence.
  * Idempotent : appelable à l'analyse comme à l'ajout au voyage. Renvoie `null` si le lieu
- * n'a pas de nom exploitable.
+ * n'a pas de nom exploitable. Si le lieu a une adresse et pas encore de coordonnées, on
+ * géocode l'adresse (OpenStreetMap) pour pouvoir le placer sur la carte et calculer des
+ * distances.
  */
 export async function upsertImportedPlace(
   db: Context['db'],
   userId: string,
   place: ExtractedPlace,
   previewImageUrl?: string | null,
-): Promise<string | null> {
+): Promise<ImportedPlaceRef | null> {
   if (!slug(place.name)) return null;
 
   const url = importedPlaceUrl(userId, normalizePlaceKey(place.name, place.city));
@@ -75,7 +84,19 @@ export async function upsertImportedPlace(
         tags: sql`coalesce(${discoveryContent.tags}, excluded.tags)`,
       },
     })
-    .returning({ id: discoveryContent.id });
+    .returning({ id: discoveryContent.id, coordinates: discoveryContent.coordinates });
 
-  return row?.id ?? null;
+  if (!row) return null;
+
+  // Géocodage ponctuel : seulement si on a une adresse et pas encore de coordonnées.
+  if (!row.coordinates && place.address) {
+    const geo = await geocodeAddress(place.address);
+    if (geo) {
+      const coordinates = toWktPoint(geo);
+      await db.update(discoveryContent).set({ coordinates }).where(eq(discoveryContent.id, row.id));
+      return { id: row.id, coordinates };
+    }
+  }
+
+  return { id: row.id, coordinates: row.coordinates };
 }

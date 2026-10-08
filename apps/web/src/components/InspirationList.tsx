@@ -1,16 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import {
-  Check,
-  ExternalLink,
-  Folder,
-  FolderPlus,
-  Loader2,
-  MapPin,
-  Plus,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, Loader2, MapPin, Plus, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { trpc, type RouterOutputs } from '../lib/trpc';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -22,6 +12,16 @@ interface InspirationListProps {
   emptyAction?: ReactNode;
   className?: string;
 }
+
+// Types proposés au filtre (alignés sur le champ `type` renvoyé par l'IA).
+const TYPE_OPTIONS = [
+  { value: 'hotel', label: 'Hôtel' },
+  { value: 'restaurant', label: 'Restaurant' },
+  { value: 'activité', label: 'Activité' },
+] as const;
+
+const typeLabel = (type: string | null): string =>
+  TYPE_OPTIONS.find((o) => o.value === type)?.label ?? '';
 
 // Un titre lisible à partir de l'analyse, à la place de l'URL brute.
 function inspirationTitle(item: Inspiration): string {
@@ -35,9 +35,6 @@ function inspirationTitle(item: Inspiration): string {
   return item.platform === 'tiktok' ? 'Publication TikTok' : 'Publication Instagram';
 }
 
-// 'all' = toutes, 'none' = sans groupe, sinon l'id du groupe.
-type GroupFilter = 'all' | 'none' | string;
-
 export function InspirationList({
   enabled = true,
   emptyAction,
@@ -46,23 +43,12 @@ export function InspirationList({
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [tripId, setTripId] = useState('');
-  const [groupTarget, setGroupTarget] = useState('');
-  const [activeGroup, setActiveGroup] = useState<GroupFilter>('all');
-  const [newGroupName, setNewGroupName] = useState('');
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [addedTo, setAddedTo] = useState<{ tripId: string; count: number } | null>(null);
-  // Confirmation de suppression (publication ou groupe), dans la DA du projet.
-  const [confirm, setConfirm] = useState<
-    { kind: 'inspiration'; id: string } | { kind: 'group'; id: string; name: string } | null
-  >(null);
-
-  const invalidateMine = () =>
-    queryClient.invalidateQueries(trpc.inspiration.listMine.queryFilter());
-  const invalidateGroups = () =>
-    queryClient.invalidateQueries(trpc.inspiration.listGroups.queryFilter());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const importsQuery = useQuery({ ...trpc.inspiration.listMine.queryOptions(), enabled });
   const tripsQuery = useQuery({ ...trpc.user.getTrips.queryOptions(), enabled });
-  const groupsQuery = useQuery({ ...trpc.inspiration.listGroups.queryOptions(), enabled });
 
   const addToTripMutation = useMutation(
     trpc.inspiration.addToTrip.mutationOptions({
@@ -77,43 +63,10 @@ export function InspirationList({
   const deleteMutation = useMutation(
     trpc.inspiration.delete.mutationOptions({
       onSuccess: () => {
-        setConfirm(null);
-        invalidateMine();
+        setConfirmDeleteId(null);
+        queryClient.invalidateQueries(trpc.inspiration.listMine.queryFilter());
       },
     }),
-  );
-
-  const createGroupMutation = useMutation(
-    trpc.inspiration.createGroup.mutationOptions({
-      onSuccess: () => {
-        setNewGroupName('');
-        invalidateGroups();
-      },
-    }),
-  );
-
-  const deleteGroupMutation = useMutation(
-    trpc.inspiration.deleteGroup.mutationOptions({
-      onSuccess: () => {
-        setConfirm(null);
-        setActiveGroup('all');
-        invalidateGroups();
-        invalidateMine();
-      },
-    }),
-  );
-
-  const addToGroupMutation = useMutation(
-    trpc.inspiration.addToGroup.mutationOptions({
-      onSuccess: () => {
-        setSelected(new Set());
-        invalidateMine();
-      },
-    }),
-  );
-
-  const removeFromGroupMutation = useMutation(
-    trpc.inspiration.removeFromGroup.mutationOptions({ onSuccess: invalidateMine }),
   );
 
   const toggle = (id: string) => {
@@ -126,45 +79,22 @@ export function InspirationList({
     });
   };
 
-  const confirmDelete = () => {
-    if (!confirm) return;
-    if (confirm.kind === 'inspiration') {
-      const id = confirm.id;
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      deleteMutation.mutate({ id });
-    } else {
-      deleteGroupMutation.mutate({ id: confirm.id });
-    }
-  };
+  const toggleType = (value: string) =>
+    setTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
 
-  const groups = groupsQuery.data ?? [];
-  const groupName = (id: string) => groups.find((g) => g.id === id)?.name ?? 'Groupe';
   const trips = tripsQuery.data ?? [];
   const tripLabel = (t: (typeof trips)[number]) => t.title || t.destination || 'Voyage sans titre';
   const effectiveTripId = tripId || trips[0]?.id || '';
-  const effectiveGroupTarget = groupTarget || groups[0]?.id || '';
 
-  // `groupIds` est toujours renvoyé par l'API, mais on se protège d'une réponse
-  // ancienne/partielle pour ne jamais crasher l'affichage de la liste.
-  const all = (importsQuery.data ?? []).map((i) => ({ ...i, groupIds: i.groupIds ?? [] }));
-  const countFor = (f: GroupFilter) =>
-    f === 'all'
-      ? all.length
-      : f === 'none'
-        ? all.filter((i) => i.groupIds.length === 0).length
-        : all.filter((i) => i.groupIds.includes(f)).length;
-
-  const visible = all.filter((i) =>
-    activeGroup === 'all'
-      ? true
-      : activeGroup === 'none'
-        ? i.groupIds.length === 0
-        : i.groupIds.includes(activeGroup),
-  );
+  const all = importsQuery.data ?? [];
+  // Aucun type coché = on affiche tout ; sinon on garde les publications du/des types choisis.
+  const visible =
+    typeFilter.size === 0 ? all : all.filter((i) => i.type !== null && typeFilter.has(i.type));
 
   const selectedCount = selected.size;
 
@@ -186,76 +116,55 @@ export function InspirationList({
     );
   }
 
-  const chip = (f: GroupFilter, label: string, deletable?: { id: string; name: string }) => {
-    const isActive = activeGroup === f;
-    return (
-      <span
-        key={f}
-        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-          isActive
-            ? 'border-[#FF4D4D] bg-[#FF4D4D] text-white'
-            : 'border-[#ddd] bg-white text-[#555] hover:border-[#FF4D4D]'
-        }`}
-      >
-        <button type="button" onClick={() => setActiveGroup(f)} className="cursor-pointer">
-          {label} ({countFor(f)})
-        </button>
-        {deletable && isActive && (
-          <button
-            type="button"
-            onClick={() => setConfirm({ kind: 'group', id: deletable.id, name: deletable.name })}
-            aria-label={`Supprimer le groupe ${deletable.name}`}
-            className="cursor-pointer rounded-full p-0.5 hover:bg-white/20"
-          >
-            <X className="h-3 w-3" strokeWidth={3} />
-          </button>
-        )}
-      </span>
-    );
-  };
-
   return (
     <div className={`space-y-3 ${className}`}>
-      {/* Barre des groupes */}
-      <div className="flex flex-wrap items-center gap-2">
-        {chip('all', 'Tous')}
-        {chip('none', 'Sans groupe')}
-        {groups.map((g) => chip(g.id, g.name, { id: g.id, name: g.name }))}
+      {/* Filtre par type (dropdown multi-sélection) */}
+      <details className="relative">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full border border-[#ddd] bg-white px-4 py-2 text-sm font-semibold text-[#555] transition hover:border-[#FF4D4D] [&::-webkit-details-marker]:hidden">
+          <ChevronDown className="h-4 w-4" />
+          Filtrer par type
+          {typeFilter.size > 0 && (
+            <span className="rounded-full bg-[#FF4D4D] px-1.5 text-xs font-bold text-white">
+              {typeFilter.size}
+            </span>
+          )}
+        </summary>
+        <div className="absolute z-20 mt-2 w-52 space-y-1 rounded-2xl border border-[#eee] bg-white p-2 shadow-lg">
+          {TYPE_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-[#1a1a1a] hover:bg-[#f6f3f0]"
+            >
+              <input
+                type="checkbox"
+                checked={typeFilter.has(opt.value)}
+                onChange={() => toggleType(opt.value)}
+                className="h-4 w-4 accent-[#FF4D4D]"
+              />
+              {opt.label}
+            </label>
+          ))}
+          {typeFilter.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setTypeFilter(new Set())}
+              className="w-full cursor-pointer rounded-xl px-2 py-1.5 text-left text-xs font-semibold text-[#888] hover:bg-[#f6f3f0] hover:text-[#FF4D4D]"
+            >
+              Tout afficher
+            </button>
+          )}
+        </div>
+      </details>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (newGroupName.trim()) createGroupMutation.mutate({ name: newGroupName.trim() });
-          }}
-          className="flex items-center gap-1"
-        >
-          <input
-            value={newGroupName}
-            onChange={(e) => setNewGroupName(e.target.value)}
-            placeholder="Nouveau groupe"
-            maxLength={60}
-            className="w-32 rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-xs text-[#1a1a1a] outline-none focus:border-[#FF4D4D]"
-          />
-          <button
-            type="submit"
-            disabled={!newGroupName.trim() || createGroupMutation.isPending}
-            aria-label="Créer le groupe"
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[#ddd] bg-white text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] disabled:opacity-40"
-          >
-            <FolderPlus className="h-3.5 w-3.5" />
-          </button>
-        </form>
-      </div>
-
-      {/* Liste filtrée */}
       {visible.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[#ddd] bg-white p-6 text-center text-sm text-[#888]">
-          Aucune publication dans ce groupe.
+          Aucune publication de ce type.
         </p>
       ) : (
         visible.map((item) => {
           const selectable = item.places.length > 0;
           const isSelected = selected.has(item.id);
+          const label = typeLabel(item.type);
           return (
             <div
               key={item.id}
@@ -302,12 +211,17 @@ export function InspirationList({
                       </a>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      {label && (
+                        <span className="rounded-full bg-[#eef3ff] px-3 py-1 text-xs font-bold text-[#3b5bdb]">
+                          {label}
+                        </span>
+                      )}
                       <span className="rounded-full bg-[#fee] px-3 py-1 text-xs font-bold text-[#FF4D4D] capitalize">
                         {item.platform}
                       </span>
                       <button
                         type="button"
-                        onClick={() => setConfirm({ kind: 'inspiration', id: item.id })}
+                        onClick={() => setConfirmDeleteId(item.id)}
                         aria-label="Supprimer cette publication"
                         className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[#eee] text-[#bbb] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D]"
                       >
@@ -361,32 +275,6 @@ export function InspirationList({
                       ))}
                     </div>
                   )}
-
-                  {item.groupIds.length > 0 && (
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      {item.groupIds.map((gid) => (
-                        <span
-                          key={gid}
-                          className="inline-flex items-center gap-1 rounded-full bg-[#eef3ff] px-2.5 py-1 text-xs font-semibold text-[#3b5bdb]"
-                        >
-                          {groupName(gid)}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeFromGroupMutation.mutate({
-                                inspirationIds: [item.id],
-                                groupId: gid,
-                              })
-                            }
-                            aria-label={`Retirer de ${groupName(gid)}`}
-                            className="cursor-pointer rounded-full p-0.5 transition hover:bg-[#3b5bdb]/15"
-                          >
-                            <X className="h-3 w-3" strokeWidth={3} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -416,8 +304,8 @@ export function InspirationList({
 
       {/* Barre d'actions sur la sélection */}
       {selectedCount > 0 && (
-        <div className="sticky bottom-3 z-10 space-y-4 rounded-2xl border border-[#eee] bg-white/95 p-4 shadow-lg backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
+        <div className="sticky bottom-3 z-10 flex flex-col gap-3 rounded-2xl border border-[#eee] bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-[#1a1a1a]">
               {selectedCount} post{selectedCount > 1 ? 's' : ''} sélectionné
               {selectedCount > 1 ? 's' : ''}
@@ -431,139 +319,67 @@ export function InspirationList({
             </button>
           </div>
 
-          {/* Section 1 — organisation en groupes */}
-          <div className="space-y-2">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#888]">
-              <Folder className="h-3.5 w-3.5" />
-              Organiser dans un groupe
-            </p>
-            {groups.length === 0 ? (
-              <p className="text-xs font-medium text-[#888]">
-                Crée un groupe plus haut pour pouvoir classer ces publications.
-              </p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={effectiveGroupTarget}
-                  onChange={(e) => setGroupTarget(e.target.value)}
-                  className="max-w-[45vw] cursor-pointer truncate rounded-xl border border-[#ddd] bg-white px-3 py-2 text-sm text-[#1a1a1a] outline-none focus:border-[#FF4D4D] sm:max-w-[160px]"
-                >
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={!effectiveGroupTarget || addToGroupMutation.isPending}
-                  onClick={() =>
-                    addToGroupMutation.mutate({
-                      inspirationIds: [...selected],
-                      groupId: effectiveGroupTarget,
-                    })
-                  }
-                  className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#FF4D4D] px-3 py-2 text-sm font-bold text-[#FF4D4D] transition hover:bg-[#FF4D4D] hover:text-white active:scale-95 disabled:opacity-50"
-                >
-                  {addToGroupMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" strokeWidth={3} />
-                  )}
-                  Classer ici
-                </button>
-                <button
-                  type="button"
-                  disabled={!effectiveGroupTarget || removeFromGroupMutation.isPending}
-                  onClick={() =>
-                    removeFromGroupMutation.mutate({
-                      inspirationIds: [...selected],
-                      groupId: effectiveGroupTarget,
-                    })
-                  }
-                  className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#ddd] px-3 py-2 text-sm font-semibold text-[#555] transition hover:border-[#1a1a1a]/30 active:scale-95 disabled:opacity-50"
-                >
-                  Retirer
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-[#eee]" />
-
-          {/* Section 2 — ajout à un voyage */}
-          <div className="space-y-2">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#888]">
-              <MapPin className="h-3.5 w-3.5" />
-              Ajouter les lieux à un voyage
-            </p>
-            {trips.length === 0 ? (
-              <p className="text-xs font-medium text-[#888]">
-                Crée d'abord un voyage pour y ajouter ces lieux.
-              </p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={effectiveTripId}
-                  onChange={(e) => setTripId(e.target.value)}
-                  className="max-w-[45vw] cursor-pointer truncate rounded-xl border border-[#ddd] bg-white px-3 py-2 text-sm text-[#1a1a1a] outline-none focus:border-[#FF4D4D] sm:max-w-[200px]"
-                >
-                  {trips.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {tripLabel(t)}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={!effectiveTripId || addToTripMutation.isPending}
-                  onClick={() =>
-                    addToTripMutation.mutate({
-                      tripId: effectiveTripId,
-                      inspirationIds: [...selected],
-                    })
-                  }
-                  className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-bold text-white shadow-md shadow-red-500/25 transition hover:brightness-105 active:scale-95 disabled:opacity-50"
-                >
-                  {addToTripMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" strokeWidth={3} />
-                  )}
-                  Ajouter au voyage
-                </button>
-              </div>
-            )}
-          </div>
+          {trips.length === 0 ? (
+            <span className="text-xs font-medium text-[#888]">
+              Crée d'abord un voyage pour y ajouter ces lieux.
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <select
+                value={effectiveTripId}
+                onChange={(e) => setTripId(e.target.value)}
+                className="max-w-[55vw] cursor-pointer truncate rounded-xl border border-[#ddd] bg-white px-3 py-2 text-sm text-[#1a1a1a] outline-none focus:border-[#FF4D4D] sm:max-w-[200px]"
+              >
+                {trips.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {tripLabel(t)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!effectiveTripId || addToTripMutation.isPending}
+                onClick={() =>
+                  addToTripMutation.mutate({
+                    tripId: effectiveTripId,
+                    inspirationIds: [...selected],
+                  })
+                }
+                className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-bold text-white shadow-md shadow-red-500/25 transition hover:brightness-105 active:scale-95 disabled:opacity-50"
+              >
+                {addToTripMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" strokeWidth={3} />
+                )}
+                Ajouter au voyage
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {(addToTripMutation.isError ||
-        addToGroupMutation.isError ||
-        removeFromGroupMutation.isError ||
-        deleteMutation.isError) && (
+      {(addToTripMutation.isError || deleteMutation.isError) && (
         <p className="text-center text-xs font-medium text-[#FF4D4D]">
           Une action a échoué, réessaie.
         </p>
       )}
 
-      {confirm && (
+      {confirmDeleteId && (
         <ConfirmDialog
-          title={
-            confirm.kind === 'inspiration' ? 'Supprimer la publication ?' : 'Supprimer le groupe ?'
-          }
-          message={
-            confirm.kind === 'inspiration'
-              ? 'Cette publication analysée sera retirée de ta liste. Les lieux déjà ajoutés à tes voyages sont conservés.'
-              : `« ${confirm.name} » sera supprimé. Les publications qu'il contient seront déclassées, pas supprimées.`
-          }
-          loading={
-            confirm.kind === 'inspiration'
-              ? deleteMutation.isPending
-              : deleteGroupMutation.isPending
-          }
-          onConfirm={confirmDelete}
-          onCancel={() => setConfirm(null)}
+          title="Supprimer la publication ?"
+          message="Cette publication analysée sera retirée de ta liste. Les lieux déjà ajoutés à tes voyages sont conservés."
+          loading={deleteMutation.isPending}
+          onConfirm={() => {
+            const id = confirmDeleteId;
+            setSelected((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+            deleteMutation.mutate({ id });
+          }}
+          onCancel={() => setConfirmDeleteId(null)}
         />
       )}
     </div>

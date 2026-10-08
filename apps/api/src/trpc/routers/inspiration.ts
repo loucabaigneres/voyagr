@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, max } from 'drizzle-orm';
 import { z } from 'zod';
 import type { ExtractedPlace } from '@voyagr/database';
-import type { Context } from '../context.js';
 import { AnalysisError, type InlineImage } from '../../lib/aiAnalysis.js';
 import { analyzeInspiration } from '../../lib/gemini.js';
 import {
@@ -14,15 +13,8 @@ import {
   normalizeContentUrl,
   stripHashtags,
 } from '../../lib/socialImport.js';
-import { upsertImportedPlace } from '../../lib/importedPlaces.js';
-import {
-  activity,
-  importedInspiration,
-  inspirationGroup,
-  inspirationGroupMember,
-  trip,
-  tripDay,
-} from '../../lib/tables.js';
+import { upsertImportedPlace, type ImportedPlaceRef } from '../../lib/importedPlaces.js';
+import { activity, importedInspiration, trip, tripDay } from '../../lib/tables.js';
 import { createTRPCRouter, protectedProcedure } from '../init.js';
 
 // Les lieux importés rejoignent le bucket « lieux likés » du voyage (jour 0), celui qui
@@ -32,16 +24,6 @@ const LIKED_DAY_INDEX = 0;
 /** Adresse postale si connue, sinon « ville, pays », sinon null. */
 const placeLocation = (place: ExtractedPlace): string | null =>
   place.address ?? ([place.city, place.country].filter(Boolean).join(', ') || null);
-
-/** Vérifie qu'un groupe appartient à l'utilisateur, sinon lève NOT_FOUND. */
-const ensureGroupOwned = async (db: Context['db'], userId: string, groupId: string) => {
-  const [group] = await db
-    .select({ id: inspirationGroup.id })
-    .from(inspirationGroup)
-    .where(and(eq(inspirationGroup.id, groupId), eq(inspirationGroup.userId, userId)));
-
-  if (!group) throw new TRPCError({ code: 'NOT_FOUND', message: 'Groupe introuvable.' });
-};
 
 // Code d'erreur reconnu par le front pour déplier le champ de saisie manuelle.
 export const CAPTION_UNAVAILABLE = 'CAPTION_UNAVAILABLE';
@@ -152,6 +134,8 @@ export const inspirationRouter = createTRPCRouter({
           originalUrl: importedInspiration.originalUrl,
           description: importedInspiration.description,
           report: importedInspiration.report,
+          type: importedInspiration.type,
+          city: importedInspiration.city,
           places: importedInspiration.places,
           tags: importedInspiration.extracted_tags,
         })
@@ -169,6 +153,8 @@ export const inspirationRouter = createTRPCRouter({
             originalUrl: existing.originalUrl,
             description: existing.description,
             report: existing.report,
+            type: existing.type,
+            city: existing.city,
             places: Array.isArray(existing.places) ? (existing.places as ExtractedPlace[]) : [],
             tags: Array.isArray(existing.tags) ? (existing.tags as string[]) : [],
           },
@@ -186,15 +172,15 @@ export const inspirationRouter = createTRPCRouter({
         (image): image is InlineImage => image !== null,
       );
 
-      // Sans légende exploitable ni aucune image, l'IA n'aurait rien à analyser :
+      // Sans légende, ni transcription, ni image, l'IA n'aurait rien à analyser :
       // on propose la saisie manuelle de la légende.
-      if (!caption && images.length === 0) {
+      if (!caption && !media.transcript && images.length === 0) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: CAPTION_UNAVAILABLE });
       }
 
       let analysis;
       try {
-        analysis = await analyzeInspiration({ caption, images });
+        analysis = await analyzeInspiration({ caption, images, transcript: media.transcript });
       } catch (error) {
         if (error instanceof AnalysisError) {
           if (error.reason === 'missing_key') {
@@ -219,13 +205,12 @@ export const inspirationRouter = createTRPCRouter({
         analysis.tags.length > 0 ? analysis.tags : caption ? extractHashtags(caption) : [];
 
       // Chaque lieu détecté devient un « élément lieu » réutilisable (dédupliqué), que
-      // l'on pourra sélectionner plus tard dans le remplacement d'activités.
+      // l'on pourra sélectionner plus tard dans le remplacement d'activités. Séquentiel :
+      // l'upsert géocode l'adresse (OpenStreetMap), qui tolère mal les requêtes en rafale.
       const previewImageUrl = media.imageUrls[0] ?? null;
-      await Promise.all(
-        analysis.places.map((place) =>
-          upsertImportedPlace(ctx.db, ctx.user.id, place, previewImageUrl),
-        ),
-      );
+      for (const place of analysis.places) {
+        await upsertImportedPlace(ctx.db, ctx.user.id, place, previewImageUrl);
+      }
 
       const [inspiration] = await ctx.db
         .insert(importedInspiration)
@@ -237,6 +222,8 @@ export const inspirationRouter = createTRPCRouter({
           extracted_location: summariseLocation(analysis.places),
           extracted_tags: tags,
           report: analysis.summary || null,
+          type: analysis.type,
+          city: analysis.city,
           places: analysis.places,
           status: 'analyzed',
         })
@@ -251,6 +238,8 @@ export const inspirationRouter = createTRPCRouter({
           originalUrl: inspiration.originalUrl,
           description: inspiration.description,
           report: inspiration.report,
+          type: inspiration.type,
+          city: inspiration.city,
           places: analysis.places,
           tags,
         },
@@ -299,13 +288,15 @@ export const inspirationRouter = createTRPCRouter({
       }
 
       // On rattache chaque lieu à son « élément lieu » (créé/dédupliqué), pour que les
-      // activités partagent la même identité que les candidats du remplacement.
-      const placesWithContent = await Promise.all(
-        places.map(async (place) => ({
+      // activités partagent la même identité (et les mêmes coordonnées) que les candidats
+      // du remplacement. Séquentiel à cause du géocodage éventuel (OpenStreetMap).
+      const placesWithContent: Array<{ place: ExtractedPlace; ref: ImportedPlaceRef | null }> = [];
+      for (const place of places) {
+        placesWithContent.push({
           place,
-          discoveryContentId: await upsertImportedPlace(ctx.db, ctx.user.id, place),
-        })),
-      );
+          ref: await upsertImportedPlace(ctx.db, ctx.user.id, place),
+        });
+      }
 
       const added = await ctx.db.transaction(async (tx) => {
         // Le bucket « lieux likés » (jour 0) peut ne pas exister encore.
@@ -330,12 +321,14 @@ export const inspirationRouter = createTRPCRouter({
         const startIndex = (maxOrder ?? -1) + 1;
 
         await tx.insert(activity).values(
-          placesWithContent.map(({ place, discoveryContentId }, i) => ({
+          placesWithContent.map(({ place, ref }, i) => ({
             tripDayId: likedDay.id,
-            discoveryContentId: discoveryContentId ?? undefined,
+            discoveryContentId: ref?.id ?? undefined,
             title: place.name,
             description: place.description ?? undefined,
             locationName: placeLocation(place) ?? undefined,
+            // Coordonnées géocodées : le lieu apparaît ainsi sur la carte du voyage.
+            coordinates: ref?.coordinates ?? undefined,
             orderIndex: startIndex + i,
           })),
         );
@@ -354,6 +347,8 @@ export const inspirationRouter = createTRPCRouter({
         originalUrl: importedInspiration.originalUrl,
         description: importedInspiration.description,
         report: importedInspiration.report,
+        type: importedInspiration.type,
+        city: importedInspiration.city,
         places: importedInspiration.places,
         tags: importedInspiration.extracted_tags,
         status: importedInspiration.status,
@@ -364,31 +359,11 @@ export const inspirationRouter = createTRPCRouter({
       .orderBy(desc(importedInspiration.createdAt))
       .limit(100);
 
-    // Appartenances aux groupes (N-N) des inspirations listées.
-    const ids = rows.map((r) => r.id);
-    const members = ids.length
-      ? await ctx.db
-          .select({
-            inspirationId: inspirationGroupMember.inspirationId,
-            groupId: inspirationGroupMember.groupId,
-          })
-          .from(inspirationGroupMember)
-          .where(inArray(inspirationGroupMember.inspirationId, ids))
-      : [];
-
-    const groupsByInspiration = new Map<string, string[]>();
-    for (const m of members) {
-      const list = groupsByInspiration.get(m.inspirationId) ?? [];
-      list.push(m.groupId);
-      groupsByInspiration.set(m.inspirationId, list);
-    }
-
     // `extracted_tags` / `places` sont des jsonb : on normalise à la lecture.
     return rows.map((row) => ({
       ...row,
       tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
       places: Array.isArray(row.places) ? (row.places as ExtractedPlace[]) : [],
-      groupIds: groupsByInspiration.get(row.id) ?? [],
     }));
   }),
 
@@ -405,99 +380,4 @@ export const inspirationRouter = createTRPCRouter({
 
     return { success: true };
   }),
-
-  listGroups: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db
-      .select({
-        id: inspirationGroup.id,
-        name: inspirationGroup.name,
-        createdAt: inspirationGroup.createdAt,
-      })
-      .from(inspirationGroup)
-      .where(eq(inspirationGroup.userId, ctx.user.id))
-      .orderBy(desc(inspirationGroup.createdAt));
-  }),
-
-  createGroup: protectedProcedure
-    .input(z.object({ name: z.string().trim().min(1, 'Donne un nom au groupe.').max(60) }))
-    .mutation(async ({ ctx, input }) => {
-      const [group] = await ctx.db
-        .insert(inspirationGroup)
-        .values({ userId: ctx.user.id, name: input.name })
-        .returning({ id: inspirationGroup.id, name: inspirationGroup.name });
-
-      return { success: true, group };
-    }),
-
-  deleteGroup: protectedProcedure
-    .input(z.object({ id: z.uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      // Les appartenances sont supprimées en cascade ; les publications sont conservées.
-      const deleted = await ctx.db
-        .delete(inspirationGroup)
-        .where(and(eq(inspirationGroup.id, input.id), eq(inspirationGroup.userId, ctx.user.id)))
-        .returning({ id: inspirationGroup.id });
-
-      if (deleted.length === 0) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Groupe introuvable.' });
-      }
-
-      return { success: true };
-    }),
-
-  /** Ajoute des publications à un groupe (relation N-N, idempotent). */
-  addToGroup: protectedProcedure
-    .input(
-      z.object({
-        inspirationIds: z.array(z.uuid()).min(1, 'Sélectionne au moins une publication.'),
-        groupId: z.uuid(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      await ensureGroupOwned(ctx.db, ctx.user.id, input.groupId);
-
-      // On ne lie que des inspirations appartenant à l'utilisateur.
-      const owned = await ctx.db
-        .select({ id: importedInspiration.id })
-        .from(importedInspiration)
-        .where(
-          and(
-            eq(importedInspiration.userId, ctx.user.id),
-            inArray(importedInspiration.id, input.inspirationIds),
-          ),
-        );
-
-      if (owned.length > 0) {
-        await ctx.db
-          .insert(inspirationGroupMember)
-          .values(owned.map((o) => ({ inspirationId: o.id, groupId: input.groupId })))
-          .onConflictDoNothing();
-      }
-
-      return { success: true, added: owned.length };
-    }),
-
-  /** Retire des publications d'un groupe (sans les supprimer). */
-  removeFromGroup: protectedProcedure
-    .input(
-      z.object({
-        inspirationIds: z.array(z.uuid()).min(1, 'Sélectionne au moins une publication.'),
-        groupId: z.uuid(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      await ensureGroupOwned(ctx.db, ctx.user.id, input.groupId);
-
-      const removed = await ctx.db
-        .delete(inspirationGroupMember)
-        .where(
-          and(
-            eq(inspirationGroupMember.groupId, input.groupId),
-            inArray(inspirationGroupMember.inspirationId, input.inspirationIds),
-          ),
-        )
-        .returning({ inspirationId: inspirationGroupMember.inspirationId });
-
-      return { success: true, removed: removed.length };
-    }),
 });

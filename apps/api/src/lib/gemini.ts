@@ -25,6 +25,8 @@ const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
     summary: { type: 'STRING' },
+    type: { type: 'STRING', enum: ['restaurant', 'hotel', 'activité', 'autre'] },
+    city: { type: 'STRING', nullable: true },
     places: {
       type: 'ARRAY',
       items: {
@@ -43,8 +45,8 @@ const RESPONSE_SCHEMA = {
     },
     tags: { type: 'ARRAY', items: { type: 'STRING' } },
   },
-  required: ['summary', 'places', 'tags'],
-  propertyOrdering: ['summary', 'places', 'tags'],
+  required: ['summary', 'type', 'places', 'tags'],
+  propertyOrdering: ['summary', 'type', 'city', 'places', 'tags'],
 } as const;
 
 interface GeminiPart {
@@ -57,20 +59,22 @@ interface GeminiResponse {
   promptFeedback?: { blockReason?: string };
 }
 
-/** Analyse une publication (légende + images d'aperçu) via Gemini. */
+/** Analyse une publication (légende + transcription + images d'aperçu) via Gemini. */
 export const analyzeInspiration = async ({
   caption,
   images,
+  transcript = null,
 }: {
   caption: string | null;
   images: InlineImage[];
+  transcript?: string | null;
 }): Promise<InspirationAnalysis> => {
   if (!env.GEMINI_API_KEY) {
     throw new AnalysisError('missing_key', 'GEMINI_API_KEY is not configured.');
   }
 
   const parts: GeminiPart[] = [
-    { text: buildUserText(caption) },
+    { text: buildUserText(caption, transcript) },
     ...images.map((image) => ({
       inlineData: { mimeType: image.mimeType, data: image.data },
     })),

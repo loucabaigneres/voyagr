@@ -1,13 +1,4 @@
-import {
-  boolean,
-  jsonb,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { platformEnum, processingStatus, swipeDirectionEnum } from '../enums.js';
 
 export type DiscoveryTags = {
@@ -34,14 +25,6 @@ export type ExtractedPlace = {
   category: PlaceCategory | null;
 };
 
-// Groupe d'organisation des inspirations, propre à un utilisateur.
-export const inspirationGroup = pgTable('inspiration_group', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull(),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
 export const importedInspiration = pgTable('imported_inspiration', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').notNull(),
@@ -53,27 +36,15 @@ export const importedInspiration = pgTable('imported_inspiration', {
   extracted_tags: jsonb('extracted_tags').notNull(),
   // Compte rendu rédigé par l'IA à partir du contenu (légende + image d'aperçu).
   report: text('report'),
+  // Type global de la publication, déduit par l'IA (sert au filtre par type).
+  type: text('type').$type<PlaceCategory>(),
+  // Ville principale de la publication, déduite par l'IA.
+  city: text('city'),
   // Lieux détectés, avec leur adresse quand elle est connue. Voir `ExtractedPlace`.
   places: jsonb('places').$type<ExtractedPlace[]>(),
   status: processingStatus('status').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
-
-// Appartenance d'une inspiration à un groupe (relation N-N : une inspiration peut être
-// dans plusieurs groupes). Les suppressions en cascade retirent l'appartenance quand
-// l'inspiration ou le groupe disparaît.
-export const inspirationGroupMember = pgTable(
-  'inspiration_group_member',
-  {
-    inspirationId: uuid('inspiration_id')
-      .notNull()
-      .references(() => importedInspiration.id, { onDelete: 'cascade' }),
-    groupId: uuid('group_id')
-      .notNull()
-      .references(() => inspirationGroup.id, { onDelete: 'cascade' }),
-  },
-  (table) => [primaryKey({ columns: [table.inspirationId, table.groupId] })],
-);
 
 export const discoveryContent = pgTable('discovery_content', {
   id: uuid('id').primaryKey().defaultRandom(),
