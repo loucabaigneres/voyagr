@@ -10,3 +10,6 @@ export type ImportInspirationValues = z.infer<typeof importInspirationSchema>;
 
 // Renvoyé par l'API quand la légende n'a pas pu être récupérée automatiquement.
 export const CAPTION_UNAVAILABLE = 'CAPTION_UNAVAILABLE';
+
+// Renvoyé par l'API quand l'analyse IA n'est pas configurée côté serveur.
+export const AI_UNAVAILABLE = 'AI_UNAVAILABLE';

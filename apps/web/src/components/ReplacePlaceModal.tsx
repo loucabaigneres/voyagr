@@ -1,15 +1,15 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect, useId, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useId, useState } from 'react';
 
-import { trpc } from '../lib/trpc.js'
+import { trpc } from '../lib/trpc.js';
 
 const CATEGORY_META: Record<string, { emoji: string; noun: string; color: string }> = {
-  hotel:      { emoji: '🏨', noun: 'un autre hébergement', color: 'rgba(255,77,77,.12)' },
-  'activité': { emoji: '🗺️', noun: 'une autre activité',   color: 'rgba(46,204,113,.12)' },
-  restaurant: { emoji: '🍽️', noun: 'un autre restaurant',  color: 'rgba(255,160,60,.14)' },
-}
+  hotel: { emoji: '🏨', noun: 'un autre hébergement', color: 'rgba(255,77,77,.12)' },
+  activité: { emoji: '🗺️', noun: 'une autre activité', color: 'rgba(46,204,113,.12)' },
+  restaurant: { emoji: '🍽️', noun: 'un autre restaurant', color: 'rgba(255,160,60,.14)' },
+};
 
-type Place = { id: string; title: string; category: string | null }
+type Place = { id: string; title: string; category: string | null };
 
 /**
  * Bottom sheet (dialog on desktop) listing the places that can replace one of
@@ -21,37 +21,41 @@ export function ReplacePlaceModal({
   onClose,
   onReplaced,
 }: {
-  tripId: string
-  place: Place
-  onClose: () => void
-  onReplaced: () => void
+  tripId: string;
+  place: Place;
+  onClose: () => void;
+  onReplaced: () => void;
 }) {
-  const titleId = useId()
-  const [shown, setShown] = useState(false)
-  const meta = CATEGORY_META[place.category ?? ''] ?? { emoji: '📍', noun: 'un autre lieu', color: 'rgba(0,0,0,.05)' }
+  const titleId = useId();
+  const [shown, setShown] = useState(false);
+  const meta = CATEGORY_META[place.category ?? ''] ?? {
+    emoji: '📍',
+    noun: 'un autre lieu',
+    color: 'rgba(0,0,0,.05)',
+  };
 
   const candidatesQuery = useQuery(
     trpc.discovery.getReplacementCandidates.queryOptions({ tripId, activityId: place.id }),
-  )
+  );
 
   const replaceMutation = useMutation(
     trpc.discovery.replaceActivity.mutationOptions({ onSuccess: onReplaced }),
-  )
+  );
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => setShown(true))
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const frame = requestAnimationFrame(() => setShown(true));
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
-      cancelAnimationFrame(frame)
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
 
   return (
     <div
@@ -84,7 +88,14 @@ export function ReplacePlaceModal({
             aria-label="Fermer"
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#ddd] bg-white text-[#555] transition hover:border-[#FF4D4D] hover:text-[#FF4D4D] active:scale-90"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
@@ -93,7 +104,9 @@ export function ReplacePlaceModal({
         <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-3">
           {candidatesQuery.isPending && (
             <p className="py-10 text-center text-sm font-semibold text-[#888]">
-              <span className="mr-1.5 inline-block animate-pulse" aria-hidden>🔎</span>
+              <span className="mr-1.5 inline-block animate-pulse" aria-hidden>
+                🔎
+              </span>
               Recherche de propositions…
             </p>
           )}
@@ -112,7 +125,8 @@ export function ReplacePlaceModal({
 
           {candidatesQuery.data?.map((candidate) => {
             const isPicking =
-              replaceMutation.isPending && replaceMutation.variables?.discoveryContentId === candidate.id
+              replaceMutation.isPending &&
+              replaceMutation.variables?.discoveryContentId === candidate.id;
             return (
               <div
                 key={candidate.id}
@@ -120,7 +134,11 @@ export function ReplacePlaceModal({
               >
                 <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl">
                   {candidate.mainMediaUrl ? (
-                    <img src={candidate.mainMediaUrl} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={candidate.mainMediaUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div
                       className="flex h-full w-full items-center justify-center text-2xl"
@@ -133,15 +151,26 @@ export function ReplacePlaceModal({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold leading-tight text-[#1a1a1a]">{candidate.title}</p>
+                  <p className="text-[15px] font-semibold leading-tight text-[#1a1a1a]">
+                    {candidate.title}
+                  </p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[#888]">
+                    {candidate.imported && (
+                      <span className="rounded-full bg-[rgba(46,204,113,.14)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#1f9d57]">
+                        Mon inspiration
+                      </span>
+                    )}
                     {candidate.suggested && (
                       <span className="rounded-full bg-[rgba(255,77,77,.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#E03E3E]">
                         Suggéré
                       </span>
                     )}
-                    {candidate.price && <span className="font-semibold text-[#555]">{candidate.price}</span>}
-                    {candidate.distanceKm != null && <span>à {formatDistance(candidate.distanceKm)}</span>}
+                    {candidate.price && (
+                      <span className="font-semibold text-[#555]">{candidate.price}</span>
+                    )}
+                    {candidate.distanceKm != null && (
+                      <span>à {formatDistance(candidate.distanceKm)}</span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -159,7 +188,7 @@ export function ReplacePlaceModal({
                   </button>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
 
@@ -170,9 +199,9 @@ export function ReplacePlaceModal({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function formatDistance(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1).replace('.', ',')} km`
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1).replace('.', ',')} km`;
 }

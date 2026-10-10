@@ -20,6 +20,14 @@ const envSchema = z.object({
 
   // Frontend URL configuration
   FRONTEND_URL: z.url().default('http://localhost:5173'),
+
+  // Google AI Studio (Gemini) — analyse des inspirations importées. Optionnel : sans clé,
+  // la route d'analyse renvoie une erreur propre plutôt que d'empêcher le serveur de démarrer.
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  // Alias stable maintenu par Google (pointe vers le Flash Lite courant). On évite un
+  // identifiant figé comme `gemini-2.5-flash` (bloqué pour les nouveaux comptes) ; le
+  // variant « lite » est le plus disponible et suffit pour l'extraction de lieux.
+  GEMINI_MODEL: z.string().min(1).default('gemini-flash-lite-latest'),
 });
 
 // Parse and validate environment variables

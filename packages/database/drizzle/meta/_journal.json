@@ -15,6 +15,27 @@
       "when": 1789457856157,
       "tag": "0001_dear_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791363324050,
+      "tag": "0002_rich_miracleman",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791441044844,
+      "tag": "0003_certain_blindfold",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791639473065,
+      "tag": "0004_lying_night_nurse",
+      "breakpoints": true
     }
   ]
 }

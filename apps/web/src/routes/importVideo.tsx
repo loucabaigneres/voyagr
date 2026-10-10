@@ -34,8 +34,8 @@ function ImportVideoPage() {
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-extrabold text-[#1a1a1a]">Importer une inspiration</h1>
       <p className="mt-1 text-sm font-medium text-[#888]">
-        Colle le lien d'un reel, d'une vidéo ou d'un post : on en extrait les hashtags pour nourrir tes
-        futurs voyages.
+        Colle le lien d'un reel, d'une vidéo ou d'un post : notre IA en fait un compte rendu et
+        repère les lieux (avec leur adresse) pour nourrir tes futurs voyages.
       </p>
 
       <div className="mt-6">
