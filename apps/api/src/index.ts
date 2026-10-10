@@ -8,6 +8,7 @@ import Fastify from 'fastify';
 import { db } from './lib/db.js';
 import { auth } from './lib/auth.js';
 import { registerImageProxy } from './routes/image-proxy.js';
+import { registerWaitlist } from './routes/waitlist.js';
 import { createContext } from './trpc/context.js';
 import { AppRouter, appRouter } from './trpc/router.js';
 
@@ -73,6 +74,9 @@ server.route({
 
 // Serves catalog images without CORS restrictions, for the PDF renderer.
 registerImageProxy(server);
+
+// Collects e-mail sign-ups from the landing-page waitlist form.
+registerWaitlist(server);
 
 // Register the tRPC plugin with the Fastify server
 await server.register(fastifyTRPCPlugin, {
