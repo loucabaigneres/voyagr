@@ -6,12 +6,14 @@ export function CreateGroupTripButton() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const { mutate: createGroup, isPending } = useMutation(trpc.group.createGroupTrip.mutationOptions({
-    onSuccess: (data) => {
-      const url = `${window.location.origin}/join/${data.inviteCode}`;
-      setInviteLink(url);
-    },
-  }));
+  const { mutate: createGroup, isPending } = useMutation(
+    trpc.group.createOrConvertGroupTrip.mutationOptions({
+      onSuccess: (data) => {
+        const url = `${window.location.origin}/join/${data.inviteCode}`;
+        setInviteLink(url);
+      },
+    })
+  );
 
   const handleCopy = () => {
     if (!inviteLink) return;

@@ -1,13 +1,13 @@
 // import type { VoyagrDb } from '#/db/voyagr';
-import type { Context } from '../context.js';
 import type { TRPCRouterRecord } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
 import type { DiscoveryContentData } from '@voyagr/database';
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DiscoveryItem, SwipeRecord } from '../../lib/recommendation/algorithm.js';
 import { rankDestinations, recommend } from '../../lib/recommendation/algorithm.js';
 import { activity, discoveryContent, swipes, trip, tripDay } from '../../lib/tables.js';
+import type { Context } from '../context.js';
 import { createTRPCRouter, publicProcedure } from '../init.js';
 
 // ─── Catalog ────────────────────────────────────────────────────────────────────
