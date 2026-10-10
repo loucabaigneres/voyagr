@@ -3,7 +3,6 @@ import { ScrollView, View } from 'react-native';
 import { AnalyzingView } from '@/features/onboarding/components/AnalyzingView';
 import { QuestionStep } from '@/features/onboarding/components/QuestionStep';
 import { QuizHeader } from '@/features/onboarding/components/QuizHeader';
-import { ONBOARDING_COPY } from '@/features/onboarding/constants';
 import { useOnboardingQuiz } from '@/features/onboarding/hooks/useOnboardingQuiz';
 import { Button, Notice, Screen } from '@/ui';
 
@@ -44,9 +43,11 @@ export default function OnboardingScreen() {
       </ScrollView>
 
       <View className="gap-3 px-6">
-        {quiz.hasFailed && <Notice message={ONBOARDING_COPY.error} />}
+        {quiz.hasFailed && (
+          <Notice message="Impossible d’enregistrer tes réponses pour le moment. Vérifie ta connexion et réessaie." />
+        )}
         <Button
-          label={quiz.isLastStep ? ONBOARDING_COPY.submit : ONBOARDING_COPY.continue}
+          label={quiz.isLastStep ? 'Découvrir mes destinations' : 'Continuer'}
           disabled={!quiz.canContinue}
           onPress={quiz.goForward}
         />

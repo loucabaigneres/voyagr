@@ -1,4 +1,4 @@
-import { ComingSoonScreen } from '@/components/ComingSoonScreen';
+import { ComingSoonScreen } from '@/ui';
 
 export default function TripsScreen() {
   return <ComingSoonScreen title="Mes voyages" />;

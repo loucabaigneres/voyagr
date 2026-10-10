@@ -7,5 +7,6 @@ node_modules/
 packages/database/data.json
 
 .claude/
+apps/mobile/AGENTS.md
 
 TODO.md

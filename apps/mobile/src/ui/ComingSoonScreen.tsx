@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 
-import { EmptyState, Screen } from '@/ui';
-import { CompassIcon } from '@/ui/icons';
+import { CompassIcon } from './icons';
+import { Screen } from './Screen';
+import { EmptyState } from './states';
 
 /**
  * Temporary placeholder for routes whose page has not been ported yet.

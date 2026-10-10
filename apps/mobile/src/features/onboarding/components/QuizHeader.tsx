@@ -4,8 +4,6 @@ import { colors } from '@/theme/tokens';
 import { ProgressBar, Text } from '@/ui';
 import { ArrowLeftIcon } from '@/ui/icons';
 
-import { ONBOARDING_COPY } from '../constants';
-
 export interface QuizHeaderProps {
   current: number;
   total: number;
@@ -19,14 +17,16 @@ export function QuizHeader({ current, total, progress, onBack }: QuizHeaderProps
       <View className="flex-row items-center justify-between">
         <Pressable
           role="button"
-          aria-label={ONBOARDING_COPY.back}
+          aria-label="Revenir à la question précédente"
           onPress={onBack}
           hitSlop={8}
           className="-ml-2 size-11 items-center justify-center rounded-full active:bg-surface"
         >
           <ArrowLeftIcon size={24} color={colors.ink.DEFAULT} />
         </Pressable>
-        <Text variant="overline">{ONBOARDING_COPY.step(current, total)}</Text>
+        <Text variant="overline">
+          Question {current} sur {total}
+        </Text>
       </View>
       <ProgressBar value={progress} segments={total} />
     </View>

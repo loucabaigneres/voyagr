@@ -1,16 +1,16 @@
 {
   "expo": {
     "name": "Seego",
-    "slug": "voyagr",
+    "slug": "seego",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "voyagr",
+    "scheme": "seego",
     "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.voyagr.app"
+      "bundleIdentifier": "com.seego.app"
     },
     "android": {
-      "package": "com.voyagr.app",
+      "package": "com.seego.app",
       "adaptiveIcon": {
         "backgroundColor": "#F7F0E8"
       },

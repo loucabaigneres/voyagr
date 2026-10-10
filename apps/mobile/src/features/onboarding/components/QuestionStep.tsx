@@ -2,8 +2,8 @@ import { View } from 'react-native';
 
 import { Em, Reveal, Text } from '@/ui';
 
-import { ONBOARDING_COPY, QUESTIONS } from '../constants';
 import type { QuizQuestion } from '../lib/quiz';
+import { QUESTIONS } from '../questions';
 import { OptionTile } from './OptionTile';
 
 export interface QuestionStepProps {
@@ -26,7 +26,7 @@ export function QuestionStep({ question, selected, onToggle }: QuestionStepProps
         </Text>
         <Text tone="muted">{subtitle}</Text>
         <Text variant="overline" className="mt-2">
-          {ONBOARDING_COPY.hint}
+          Plusieurs choix possibles
         </Text>
       </Reveal>
 

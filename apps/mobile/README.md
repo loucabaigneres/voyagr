@@ -25,16 +25,16 @@ src/
     components/   UI specific to the feature, one component per file
     hooks/        useXxx: tRPC calls + state orchestration
     lib/          Pure functions (business rules), each with a *.test.ts
-    constants.ts  Options and copy
-  ui/             Design-system primitives (Text, Button, Card, Chip, Sheet, states…)
-  domain/         Helpers shared by every feature (places, dates, trip day conventions)
+  ui/             Design-system primitives (Text, Button, Card, Chip, Sheet, states…), written
+                  in-house on NativeWind: no third-party UI kit
+  hooks/          Generic hooks reused across features (useHardwareBack…)
   theme/tokens.ts Colours, radii, shadows — the only place a colour value may appear
   lib/            tRPC client, env, storage, guest id
 ```
 
 ## Rules
 
-1. No business logic in `app/` screens or in components: put it in `features/*/lib` or `domain/`, with a test.
+1. No business logic in `app/` screens or in components: put it in `features/*/lib`, with a test.
 2. No hard-coded colours: use token classes (`bg-primary`, `text-ink-muted`, `rounded-card`) or `theme/tokens`.
 3. API types come from `RouterOutputs` / `RouterInputs` (`@/lib/trpc`), never from relative imports into `apps/api`.
 4. Every query renders its loading, error (with retry) and empty states using `@/ui`.

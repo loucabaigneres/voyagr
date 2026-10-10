@@ -2,8 +2,8 @@ import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useReducer } from 'react';
 
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { useGuestId } from '@/lib/guest-id';
-import { useHardwareBack } from '@/lib/use-hardware-back';
 import { trpc } from '@/lib/trpc';
 
 import {

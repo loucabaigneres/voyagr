@@ -156,16 +156,3 @@ export const QUESTIONS: { [Q in QuizQuestion]: QuestionCopy<Q> } = {
     ],
   },
 };
-
-export const ONBOARDING_COPY = {
-  step: (current: number, total: number) => `Question ${current} sur ${total}`,
-  hint: 'Plusieurs choix possibles',
-  back: 'Revenir à la question précédente',
-  continue: 'Continuer',
-  submit: 'Découvrir mes destinations',
-  analyzing: {
-    title: ['On analyse tes ', 'envies', '…'],
-    subtitle: 'On sélectionne les destinations et les lieux qui te ressemblent.',
-  },
-  error: 'Impossible d’enregistrer tes réponses pour le moment. Vérifie ta connexion et réessaie.',
-} as const;
