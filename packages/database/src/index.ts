@@ -8,6 +8,7 @@ import * as inspiration from './schemas/inspiration.js';
 import * as payment from './schemas/payment.js';
 import * as trip from './schemas/trip.js';
 import * as onboarding from './schemas/onboarding.js';
+import * as waitlist from './schemas/waitlist.js';
 
 export * from './enums.js';
 export * from './schemas/auth.js';
@@ -16,6 +17,7 @@ export * from './schemas/inspiration.js';
 export * from './schemas/payment.js';
 export * from './schemas/trip.js';
 export * from './schemas/onboarding.js';
+export * from './schemas/waitlist.js';
 
 export { loadDiscoveryData, type DiscoveryContentData } from './data.js';
 export type { DiscoveryTags } from './schemas/inspiration.js';
@@ -28,6 +30,7 @@ export const schema = {
   ...payment,
   ...trip,
   ...onboarding,
+  ...waitlist,
 };
 
 export const createClient = (connectionString: string) => {
