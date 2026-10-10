@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
@@ -83,6 +83,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 function DiscoveryPage() {
   const navigate = useNavigate()
   const { tripId } = Route.useSearch()
+  const queryClient = useQueryClient()
 
   const feedQuery = useQuery(trpc.discovery.feed.queryOptions())
   const feed = feedQuery.data ?? []
@@ -157,12 +158,15 @@ function DiscoveryPage() {
 
   // Persisting the recommended trip to the database (on explicit click).
   const saveTrip = useMutation(
-    trpc.discovery.saveTrip.mutationOptions({
-      onSuccess: (data) => {
-        navigate({ to: '/trip/configure', search: { tripId: data.tripId ?? tripId } })
-      },
-    }),
-  )
+  trpc.discovery.saveTrip.mutationOptions({
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.group.getMyGroupTrips.queryKey(),
+      })
+      navigate({ to: '/trip/configure', search: { tripId: data.tripId ?? tripId } })
+    },
+  }),
+)
 
   const shownAtRef = useRef<number>(0)
   useEffect(() => {
@@ -548,7 +552,7 @@ function DiscoveryPage() {
           skips={skips}
           onClose={() => setShowResult(false)}
           onRestart={handleRestart}
-          onSave={() => saveTrip.mutate({ swipes: history })}
+          onSave={() => saveTrip.mutate({ tripId, swipes: history })}
           saveState={{
             isPending: saveTrip.isPending,
             isSuccess: saveTrip.isSuccess,

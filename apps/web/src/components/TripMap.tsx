@@ -312,7 +312,7 @@ export function TripMap({ days }: TripMapProps) {
       </div>
 
       {/* ── Map card ── */}
-      <div className="relative overflow-hidden rounded-[28px] border border-[#eee] bg-white shadow-sm">
+      <div className="relative overflow-hidden z-0 rounded-[28px] border border-[#eee] bg-white shadow-sm">
         <div ref={containerRef} style={{ height: 400 }} className="w-full" />
 
         {/* ── Detail panel ── */}
