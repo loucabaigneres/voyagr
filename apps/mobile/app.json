@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Seego",
+    "slug": "seego",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "seego",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.seego.app"
+    },
+    "android": {
+      "package": "com.seego.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F0E8"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F7F0E8"
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

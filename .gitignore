@@ -6,4 +6,7 @@ node_modules/
 .vscode/
 packages/database/data.json
 
+.claude/
+apps/mobile/AGENTS.md
+
 TODO.md
