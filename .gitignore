@@ -1,0 +1,9 @@
+node_modules/
+.turbo/
+.env
+.pnpm-store/
+.DS_Store
+.vscode/
+packages/database/data.json
+
+TODO.md

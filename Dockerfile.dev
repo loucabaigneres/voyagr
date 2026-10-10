@@ -1,0 +1,15 @@
+FROM node:24-alpine
+
+RUN apk add --no-cache libc6-compat python3 make g++
+
+RUN corepack enable
+
+WORKDIR /app
+
+COPY . .
+
+RUN pnpm install
+
+EXPOSE 3000
+
+CMD ["pnpm", "turbo", "run", "dev", "--filter=@voyagr/api"]

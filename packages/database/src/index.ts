@@ -1,0 +1,36 @@
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+
+import * as enums from './enums.js';
+import * as auth from './schemas/auth.js';
+import * as document from './schemas/document.js';
+import * as inspiration from './schemas/inspiration.js';
+import * as payment from './schemas/payment.js';
+import * as trip from './schemas/trip.js';
+import * as onboarding from './schemas/onboarding.js';
+
+export * from './enums.js';
+export * from './schemas/auth.js';
+export * from './schemas/document.js';
+export * from './schemas/inspiration.js';
+export * from './schemas/payment.js';
+export * from './schemas/trip.js';
+export * from './schemas/onboarding.js';
+
+export { loadDiscoveryData, type DiscoveryContentData } from './data.js';
+export type { DiscoveryTags } from './schemas/inspiration.js';
+
+export const schema = {
+  ...enums,
+  ...auth,
+  ...document,
+  ...inspiration,
+  ...payment,
+  ...trip,
+  ...onboarding,
+};
+
+export const createClient = (connectionString: string) => {
+  const client = postgres(connectionString);
+  return drizzle({ client, schema });
+};
