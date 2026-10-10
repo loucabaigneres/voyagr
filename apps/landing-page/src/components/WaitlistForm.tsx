@@ -10,17 +10,26 @@ type WaitlistFormProps = {
   onJoined: (email: string) => void;
   /** 'dark' tweaks the helper text for use on a dark background (CTA band). */
   tone?: 'light' | 'dark';
+  /** 'start' aligns the form left on desktop; 'center' keeps it centered. */
+  align?: 'center' | 'start';
 };
 
-export function WaitlistForm({ joinedEmail, onJoined, tone = 'light' }: WaitlistFormProps) {
+export function WaitlistForm({
+  joinedEmail,
+  onJoined,
+  tone = 'light',
+  align = 'center',
+}: WaitlistFormProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
 
+  const alignClass = align === 'start' ? 'mx-auto lg:mx-0' : 'mx-auto';
+
   if (joinedEmail) {
     return (
       <div
-        className="mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-accent/20 bg-white/90 p-4 text-left shadow-sm"
+        className={`flex max-w-md items-start gap-3 rounded-2xl border border-accent/20 bg-white/90 p-4 text-left shadow-sm ${alignClass}`}
         role="status"
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
@@ -61,7 +70,7 @@ export function WaitlistForm({ joinedEmail, onJoined, tone = 'light' }: Waitlist
   const helperColor = tone === 'dark' ? 'text-white/60' : 'text-muted';
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-md">
+    <form onSubmit={handleSubmit} noValidate className={`w-full max-w-md ${alignClass}`}>
       <div className="flex flex-col gap-2.5 sm:flex-row">
         <div className="relative flex-1">
           <Mail

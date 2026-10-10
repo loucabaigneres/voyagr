@@ -40,8 +40,8 @@ export function Hero({ joinedEmail, onJoined }: HeroProps) {
             on assemble ton itinéraire sur mesure. Sois le premier prévenu du lancement.
           </p>
 
-          <div className="mt-8 lg:mx-0">
-            <WaitlistForm joinedEmail={joinedEmail} onJoined={onJoined} />
+          <div className="mt-8">
+            <WaitlistForm joinedEmail={joinedEmail} onJoined={onJoined} align="start" />
           </div>
 
           <SocialProof className="mt-6 lg:justify-start" align="center" />
