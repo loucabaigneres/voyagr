@@ -4,8 +4,11 @@ import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 // Type-only import: no server code ends up in the app bundle.
 import type { AppRouter } from '@voyagr/api/src/trpc/router';
+import { Platform } from 'react-native';
 
 import { env } from '@/env';
+
+import { getAuthHeaders } from './auth-client';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +24,10 @@ const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: `${env.EXPO_PUBLIC_API_URL}/trpc`,
-      fetch: (url, options) => fetch(url, { ...options, credentials: 'include' }),
+      headers: getAuthHeaders,
+      // Native sends the session cookie by hand (see `getAuthHeaders`); `omit` avoids a clash.
+      fetch: (url, options) =>
+        fetch(url, { ...options, credentials: Platform.OS === 'web' ? 'include' : 'omit' }),
     }),
   ],
 });

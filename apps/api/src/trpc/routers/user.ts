@@ -2,17 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { count, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { swipes, trip, user } from '../../lib/tables.js';
-import { createTRPCRouter, publicProcedure } from '../init.js';
+import { createTRPCRouter, protectedProcedure } from '../init.js';
 
 export const userRouter = createTRPCRouter({
-  getProfile: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'Vous devez être connecté pour accéder à cette ressource.',
-      });
-    }
-
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
     const [userData] = await ctx.db
       .select({
         id: user.id,
@@ -43,11 +36,7 @@ export const userRouter = createTRPCRouter({
     };
   }),
 
-  getTrips: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Non authentifié.' });
-    }
-
+  getTrips: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db
       .select({
         id: trip.id,
@@ -61,7 +50,7 @@ export const userRouter = createTRPCRouter({
       .orderBy(desc(trip.createdAt));
   }),
 
-  updateProfile: publicProcedure
+  updateProfile: protectedProcedure
     .input(
       z.object({
         name: z.string().min(2, 'Le nom doit comporter au moins 2 caractères'),
@@ -69,10 +58,6 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Non authentifié.' });
-      }
-
       await ctx.db
         .update(user)
         .set({
@@ -85,16 +70,9 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  saveTripToAccount: publicProcedure
+  saveTripToAccount: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Vous devez être connecté pour enregistrer ce voyage.',
-        });
-      }
-
       const [updatedTrip] = await ctx.db
         .update(trip)
         .set({

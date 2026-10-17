@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import type { ReactElement, ReactNode } from 'react';
+import { ScrollView, View, type RefreshControlProps } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { cn } from './cn';
@@ -9,6 +9,8 @@ export interface ScreenProps {
   scroll?: boolean;
   edges?: Edge[];
   contentClassName?: string;
+  /** Pull-to-refresh; only with `scroll`. */
+  refreshControl?: ReactElement<RefreshControlProps>;
 }
 
 export function Screen({
@@ -16,6 +18,7 @@ export function Screen({
   scroll = false,
   edges = ['top', 'bottom'],
   contentClassName,
+  refreshControl,
 }: ScreenProps) {
   const contentClasses = cn('px-6 py-6', contentClassName);
 
@@ -26,6 +29,7 @@ export function Screen({
           contentContainerClassName={cn('grow', contentClasses)}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

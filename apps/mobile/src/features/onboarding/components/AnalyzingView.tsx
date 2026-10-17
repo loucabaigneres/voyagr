@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { colors } from '@/theme/tokens';
-import { Em, Reveal, Spinner, Text } from '@/ui';
+import { Reveal, Spinner, Text } from '@/ui';
 import { SparkleIcon } from '@/ui/icons';
 
 /** Shown while the answers are saved and the deck is prepared. */
@@ -13,7 +13,7 @@ export function AnalyzingView() {
       </Reveal>
       <Reveal order={1} className="items-center gap-2">
         <Text variant="title" className="text-center">
-          On analyse tes <Em>envies</Em>…
+          On analyse tes envies…
         </Text>
         <Text tone="muted" className="text-center">
           On sélectionne les destinations et les lieux qui te ressemblent.

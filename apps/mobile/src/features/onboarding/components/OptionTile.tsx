@@ -12,7 +12,6 @@ export interface OptionTileProps {
   onPress: () => void;
 }
 
-
 export function OptionTile({ icon: Icon, title, description, selected, onPress }: OptionTileProps) {
   const Mark = selected ? CheckCircleIcon : CircleIcon;
 

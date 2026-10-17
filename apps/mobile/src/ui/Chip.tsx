@@ -13,7 +13,6 @@ export interface ChipProps extends Omit<PressableProps, 'children'> {
   className?: string;
 }
 
-
 export function Chip({ label, selected = false, icon, className, ...props }: ChipProps) {
   const Icon = icon ?? (selected ? CheckIcon : undefined);
 

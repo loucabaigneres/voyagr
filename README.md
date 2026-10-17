@@ -84,6 +84,17 @@ EXPO_PUBLIC_API_URL=http://localhost:3000
 
 > ⚠️ **Note for Mobile testing:** _If you are testing the mobile app on a physical device using Expo Go, `localhost` will not work. You must replace it with your computer's local IP address (e.g., `EXPO_PUBLIC_API_URL=http://192.168.1.X:3000`)._
 
+#### Mobile authentication (Better Auth)
+
+The mobile app signs in through the API's Better Auth, with the `@better-auth/expo` plugin: the session lives in SecureStore, and everything runs in Expo Go (no development build).
+
+- **Email / password** works on every target, including a LAN IP.
+- **Google** uses the browser redirect flow, so Google must reach the API's callback (`<BETTER_AUTH_URL>/api/auth/callback/google`, listed in the Google Cloud Console). Google refuses private IPs, so:
+  - **iOS simulator**: `http://localhost:3000` works as is.
+  - **Android emulator or USB device**: run `adb reverse tcp:3000 tcp:3000`, then use `EXPO_PUBLIC_API_URL=http://localhost:3000`.
+  - **Physical iPhone**: expose the API through an HTTPS tunnel (e.g. `ngrok http 3000`), set the tunnel URL as `BETTER_AUTH_URL` (API) and `EXPO_PUBLIC_API_URL` (mobile), and add `<tunnel>/api/auth/callback/google` to the Google console.
+- The API trusts the app scheme `voyagr://` and, in development, Expo Go (`exp://`) and the web preview (`http://localhost:8081`). See `apps/api/src/lib/auth.ts`.
+
 Create `packages/database/.env`:
 
 ```env
